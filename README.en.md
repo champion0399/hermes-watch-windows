@@ -433,6 +433,56 @@ This path speaks lockdown to the watch directly, bypassing NanoAppSync — **pro
 
 ---
 
+## Part 4D · Free-account 7-day expiry and renewal
+
+### What actually expires
+
+Free (Personal Team) signing produces two time-bombed artifacts:
+
+| Artifact | Lifetime | Symptom on expiry |
+|---|---|---|
+| `embedded.mobileprovision` | **7 days** | app won't open, or the watch icon greys out |
+| Development certificate | ~1 year | usually invisible |
+
+**The App Group registration does not expire** — `<GROUP_ID>` persists under your team forever once created. Renewal reuses it; never re-register a new one.
+
+### Renewal (run once per expiry, ~5 min)
+
+Same prerequisites as the first install: iPhone unlocked & screen on, watch worn & unlocked, env vars set. Then just two steps:
+
+```bash
+# 1. Re-sign + install to iPhone (same grouped IPA, no re-patching)
+xtool-watch install ~/xtool-tmp/hermes-1.4.1-grouped.ipa \
+  --watch-udid <WATCH_UDID> \
+  --signed-ipa-output ~/xtool-tmp/hermes-signed.ipa
+# delete the old output file first if it exists, or use a new name
+
+# 2. Re-push to the watch (freshly signed .app)
+cd ~/xtool-tmp
+unzip -o -q hermes-signed.ipa 'Payload/HermesCompanion.app/Watch/HermesEnabler2.app/*' -d extract2
+mv 'extract2/Payload/HermesCompanion.app/Watch/HermesEnabler2.app' ./HermesEnabler2.app
+
+cd <watch-device-helper dir>
+USBMUXD_SOCKET_ADDRESS=172.27.128.1:27015 \
+  ~/Developer/xtool-watch-device-venv/bin/python3 \
+  watch_device.py --state-directory ~/xtool-tmp/watch-device-state \
+  --install ~/xtool-tmp/HermesEnabler2.app
+```
+
+### What you do NOT need to redo
+
+- ❌ Re-patch the binary (`hermes-1.4.1-grouped.ipa` is reusable)
+- ❌ Re-register the App Group (team groups persist forever)
+- ❌ Re-run `xtool-watch auth` (unless you logged out / changed accounts)
+- ❌ Re-trust the watch (pairing cache still lives in `--state-directory`)
+- ❌ Re-enable Developer Mode (device-level setting)
+
+### Suggestion: script it
+
+Wrap the two commands into a `renew.sh` on PATH and run it weekly. Set a calendar reminder for day 6 (one day of margin so the app never actually dies).
+
+---
+
 ## Part 5 · Troubleshooting table
 
 | Symptom | Cause | Fix |
@@ -448,7 +498,7 @@ This path speaks lockdown to the watch directly, bypassing NanoAppSync — **pro
 | Watch asks "Trust This Computer" | fresh pairing cache | wear & unlock watch, accept when the helper triggers it |
 | Runtime "MobileGestalt Access Failed" with correct group | escape path broken on this watchOS (upstream issue #7) | not a signing issue; wait for upstream fix |
 | `swift: command not found` | new shell without PATH | `export PATH=/opt/swift-6.4.1/usr/bin:$PATH` |
-| App stops opening after 7 days | free-account profile expiry | rerun 4.4 + 4.5 |
+| App stops opening after 7 days | free-account profile expiry (group ID / trust / dev mode all persist) | just the two renewal steps in 4D |
 
 ---
 

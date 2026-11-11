@@ -455,6 +455,56 @@ USBMUXD_SOCKET_ADDRESS=172.27.128.1:27015 \
 
 ---
 
+## 第 4D 部分 · 免费账号 7 天过期与续签
+
+### 会过期的到底是什么
+
+免费（Personal Team）签名产生两个有时效的东西：
+
+| 产物 | 有效期 | 到期表现 |
+|---|---|---|
+| 描述文件 `embedded.mobileprovision` | **7 天** | app 打不开，或手表上图标变灰点不动 |
+| 开发证书 | ~1 年 | 一般无感 |
+
+**App Group 注册本身不会过期**——`<GROUP_ID>` 一旦在你团队下创建就一直存在，续签时 Apple 直接复用，不需要（也不应该）再注册新的。
+
+### 续签操作（每次到期跑一遍，约 5 分钟）
+
+前置和首次一样：iPhone 解锁亮屏、手表戴着解锁、环境变量都在。然后只需两步：
+
+```bash
+# 1. 重新签名 + 装 iPhone（同一个 grouped IPA，不用再 patch）
+xtool-watch install ~/xtool-tmp/hermes-1.4.1-grouped.ipa \
+  --watch-udid <WATCH_UDID> \
+  --signed-ipa-output ~/xtool-tmp/hermes-signed.ipa
+# 注意：输出文件已存在会先删掉，或者换个输出名
+
+# 2. 重新直推手表（fresh-signed 的 .app）
+cd ~/xtool-tmp
+unzip -o -q hermes-signed.ipa 'Payload/HermesCompanion.app/Watch/HermesEnabler2.app/*' -d extract2
+mv 'extract2/Payload/HermesCompanion.app/Watch/HermesEnabler2.app' ./HermesEnabler2.app
+
+cd <watch-device-helper目录>
+USBMUXD_SOCKET_ADDRESS=172.27.128.1:27015 \
+  ~/Developer/xtool-watch-device-venv/bin/python3 \
+  watch_device.py --state-directory ~/xtool-tmp/watch-device-state \
+  --install ~/xtool-tmp/HermesEnabler2.app
+```
+
+### 不需要重做的事
+
+- ❌ 不用重新 patch 二进制（`hermes-1.4.1-grouped.ipa` 留着复用）
+- ❌ 不用重新注册 App Group（团队下的组 ID 永久有效）
+- ❌ 不用重新 `xtool-watch auth`（除非登出或换账号）
+- ❌ 不用重新点手表信任（`--state-directory` 里的配对缓存还在）
+- ❌ 不用重开开发者模式（开关状态是设备级的）
+
+### 建议：把续签做成脚本
+
+把上面两条命令写成一个 `renew.sh` 放 PATH 里，每周跑一次。也可以在日历设个 6 天后的提醒（留一天余量，避免哪天忘了导致 app 罢工）。
+
+---
+
 ## 第 5 部分 · 坑位速查
 
 | 现象 | 原因 | 解法 |
@@ -470,7 +520,7 @@ USBMUXD_SOCKET_ADDRESS=172.27.128.1:27015 \
 | 手表要求"信任此电脑" | 手表配对缓存是新的 | 戴表解锁，用 4.5 工具触发后点信任 |
 | 运行报 MobileGestalt 但组 ID 显示正常 | 该 watchOS 版本 escape 路径本身失效（上游 issue #7） | 非签名问题，等作者更新 |
 | `swift: command not found` | 新 shell 没 source PATH | `export PATH=/opt/swift-6.4.1/usr/bin:$PATH` |
-| 7 天后 app 打不开 | 免费账号证书过期 | 重跑 4.4 + 4.5 |
+| 7 天后 app 打不开 | 免费账号描述文件过期（组 ID/信任/开发者模式都还在） | 只需 4D 两步续签，不用重头再来 |
 
 ---
 
