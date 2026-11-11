@@ -1,60 +1,61 @@
-# HermesEnabler 装到 Apple Watch 全流程手册（Windows + WSL + 免费 Apple 账号，零 Mac）
+# Sideload HermesEnabler to Apple Watch — full guide (Windows + WSL + free Apple ID, no Mac)
 
-> **给 AI agent 的说明**：这是一份从头开始的完整操作手册，不要跳过任何"自检"步骤。
-> 所有路径里的 `champ`、`<DEPS_PREFIX>`、`<WATCH_UDID>`、`<PHONE_UDID>`、`<GROUP_ID>` 是占位符，按实际值替换。
-> 已验证环境：Windows 11 + WSL2 Ubuntu 24.04、Swift 6.4.1、libimobiledevice 1.4.0、iPhone（iOS 26.x）、Apple Watch（watchOS 27.2）、免费 Apple ID。
+**English | [中文](README.zh-CN.md)**
+
+> **Note for AI agents**: this is a from-scratch runbook. Do not skip the "verify" steps.
+> All placeholders — `champ`, `<DEPS_PREFIX>`, `<WATCH_UDID>`, `<PHONE_UDID>`, `<GROUP_ID>` — must be replaced with real values.
+> Verified on: Windows 11 + WSL2 Ubuntu 24.04, Swift 6.4.1, libimobiledevice 1.4.0, iPhone (iOS 26.x), Apple Watch (watchOS 27.2), free Apple ID.
 
 ---
 
-## 第 0 部分 · 硬件与账号准备
+## Part 0 · Hardware & account prerequisites
 
-| 项 | 要求 | 检查方法 |
+| Item | Requirement | How to check |
 |---|---|---|
-| 电脑 | Windows 10/11，能用 WSL2 | `wsl --status` |
-| iPhone | USB 连电脑，点过"信任此电脑" | 插线后 iPhone 弹信任框 |
-| Apple Watch | 已与 iPhone 配对，佩戴且解锁 | 手表能正常看表盘 |
-| Apple 账号 | **免费** Apple ID 即可，无需付费开发者 | 记住账号密码，后面 `xtool auth` 要用 |
-| iPhone 开发者模式 | 设置 → 隐私与安全性 → 开发者模式 → 开 | 开关在最底部，开了要重启一次手机 |
-| 手表开发者模式 | 手表 设置 → 隐私与安全性 → 开发者模式 → 开 | 同上 |
+| Computer | Windows 10/11 with WSL2 support | `wsl --status` |
+| iPhone | USB-connected, has tapped "Trust This Computer" | Trust prompt appears on plugin |
+| Apple Watch | Paired to the iPhone, worn & unlocked | Watch face reachable |
+| Apple account | **Free** Apple ID — no paid developer program | Needed later for `xtool auth` |
+| iPhone developer mode | Settings → Privacy & Security → Developer Mode → ON | Toggle at the very bottom; reboot required |
+| Watch developer mode | Watch → Settings → Privacy & Security → Developer Mode → ON | Same |
 
 ---
 
-## 第 1 部分 · Windows 侧软件
+## Part 1 · Windows-side software
 
-### 1.1 安装 Apple Devices（或 iTunes）
+### 1.1 Install Apple Devices (or iTunes)
 
-作用：提供 `AppleMobileDeviceService`，它在本机 `127.0.0.1:27015` 跑 usbmuxd，是 WSL 与 iPhone 通信的桥。
+Purpose: provides `AppleMobileDeviceService`, which runs usbmuxd on `127.0.0.1:27015` — the bridge between WSL and the iPhone.
 
-- Microsoft Store 搜 **"Apple Devices"** 安装（或装 iTunes）。
-- 插 iPhone，等 Windows 识别，iPhone 上点"信任"。
-- 验证：`netstat -ano | findstr ":27015"` 应看到 `127.0.0.1:27015 LISTENING`，进程名 `AppleMobileDeviceService`。
+- Install **Apple Devices** from the Microsoft Store (or iTunes).
+- Plug in the iPhone, wait for Windows to recognize it, tap **Trust** on the iPhone.
+- Verify: `netstat -ano | findstr ":27015"` should show `127.0.0.1:27015 LISTENING` owned by `AppleMobileDeviceService`.
 
-### 1.2 安装 WSL2 + Ubuntu 24.04
+### 1.2 Install WSL2 + Ubuntu 24.04
 
-PowerShell（管理员）：
+In an elevated PowerShell:
 
 ```powershell
 wsl --install -d Ubuntu-24.04
 ```
 
-装完启动一次，创建 Linux 用户（假设用户名 `champ`，全程用它）。
+Launch once and create the Linux user (this guide uses `champ`).
 
-### 1.3 WSL 网关地址（关键！）
+### 1.3 WSL gateway address (critical)
 
-WSL 不能直接连 Windows 的 127.0.0.1，要走网关。查网关 IP：
+WSL cannot reach Windows `127.0.0.1` directly; it goes through the gateway. Find it inside WSL:
 
 ```bash
-# WSL 内
-ip route show default | awk '{print $3}'     # 例如输出 172.27.128.1
+ip route show default | awk '{print $3}'     # e.g. 172.27.128.1
 ```
 
-本手册统一用 `USBMUXD_SOCKET_ADDRESS=172.27.128.1:27015`——把 IP 换成你查到的网关。原理：Windows 的 WSL 转发把 WSL 网关地址上的端口映射到 Windows localhost 同名端口，于是 WSL 里连 `网关IP:27015` = 连 Windows 的 usbmuxd。
+Throughout this guide `USBMUXD_SOCKET_ADDRESS=172.27.128.1:27015` — replace the IP with your gateway. WSL's relay maps `<gateway-ip>:27015` to `127.0.0.1:27015` on Windows, so WSL processes talk to usbmuxd through it.
 
 ---
 
-## 第 2 部分 · WSL 内环境搭建
+## Part 2 · WSL environment
 
-### 2.1 基础构建工具
+### 2.1 Base build tools
 
 ```bash
 sudo apt update
@@ -62,20 +63,19 @@ sudo apt install -y build-essential git curl wget pkg-config autoconf automake l
   libssl-dev libplist-dev unzip zip python3 python3-venv python3-pip
 ```
 
-### 2.2 Swift 6.4.x 工具链
+### 2.2 Swift 6.4.x toolchain
 
 ```bash
-# 下载 Swift 6.4.1 Ubuntu 24.04 版（官网 swift.org/install/linux）
 cd /tmp
 curl -LO https://download.swift.org/swift-6.4.1-release/ubuntu2404/swift-6.4.1-RELEASE/swift-6.4.1-RELEASE-ubuntu24.04.tar.gz
 sudo mkdir -p /opt/swift-6.4.1
 sudo tar -xzf swift-6.4.1-RELEASE-ubuntu24.04.tar.gz -C /opt/swift-6.4.1 --strip-components=1
 echo 'export PATH=/opt/swift-6.4.1/usr/bin:$PATH' >> ~/.bashrc
 export PATH=/opt/swift-6.4.1/usr/bin:$PATH
-swift --version   # 应输出 Swift version 6.4.1
+swift --version   # should print Swift version 6.4.1
 ```
 
-还需要 Swift 的 Linux 运行依赖（缺什么按报错补）：
+Swift runtime deps:
 
 ```bash
 sudo apt install -y binutils gnupg2 libc6-dev libcurl4-openssl-dev libedit2 \
@@ -83,9 +83,9 @@ sudo apt install -y binutils gnupg2 libc6-dev libcurl4-openssl-dev libedit2 \
   pkg-config tzdata unzip zlib1g-dev libncurses-dev libsqlite3-dev
 ```
 
-### 2.3 libimobiledevice 1.4 全家桶（源码编译）
+### 2.3 libimobiledevice 1.4 family (from source)
 
-xtool 的设备交互层依赖这些库的最新版（Ubuntu 源里的太旧），编译到独立前缀：
+xtool's device layer needs the latest versions (Ubuntu's are too old). Build into a private prefix:
 
 ```bash
 mkdir -p ~/Developer/xtool-native-deps/{src,prefix}
@@ -109,20 +109,20 @@ build_dep libtatsu 1.0.4
 build_dep libimobiledevice 1.4.0
 ```
 
-**注意**：`--without-tools` 不带 `idevice_*` 命令行工具。本手册的诊断命令（`idevice_id`、`ideviceinfo`）需要 tools——把最后一项 `libimobiledevice` 的构建参数去掉 `--without-tools` 再编一次即可，或单独装 `apt install libimobiledevice-tools` 做诊断。
+**Note**: `--without-tools` skips the `idevice_*` CLI tools used by the diagnostics below. Rebuild `libimobiledevice` without `--without-tools`, or `apt install libimobiledevice-utils`/`libimobiledevice-tools` just for diagnosis.
 
-自检（iPhone 解锁亮屏插着 USB）：
+Self-check (iPhone unlocked, screen on, USB connected):
 
 ```bash
 export USBMUXD_SOCKET_ADDRESS=172.27.128.1:27015
-idevice_id -l                       # 输出 <PHONE_UDID>
-ideviceinfo -k DeviceName           # 输出手机名
-ideviceinfo -k PasswordProtected    # 必须 false
+idevice_id -l                       # prints <PHONE_UDID>
+ideviceinfo -k DeviceName           # prints phone name
+ideviceinfo -k PasswordProtected    # must be false
 ```
 
-**坑**：iPhone 锁屏时 `idevice_id` 会先列出设备随即消失，所有后续命令报 `No device found`。全程保持手机解锁。
+**Gotcha**: while the iPhone is locked, `idevice_id` briefly lists then loses the device and everything later reports `No device found`. Keep the phone unlocked for the whole procedure.
 
-### 2.4 xtool 源码（fork：xtool-watch）
+### 2.4 xtool source (fork: xtool-watch)
 
 ```bash
 cd ~/Developer
@@ -130,36 +130,36 @@ git clone https://github.com/xtool-org/xtool.git xtool-watch-fix
 cd xtool-watch-fix && git checkout 1.24.0
 ```
 
-然后按**第 3 部分**打补丁。
+Apply the patches in **Part 3**.
 
-### 2.5 pymobiledevice3（直连手表用）
+### 2.5 pymobiledevice3 (direct Watch install)
 
 ```bash
 python3 -m venv ~/Developer/xtool-watch-device-venv
 ~/Developer/xtool-watch-device-venv/bin/pip install pymobiledevice3
 ```
 
-再把 `watch_connection.py` 和 `watch_device.py` 两个文件放到一个目录（本手册配套文件在 `work/watch-device-helper/`，内容见第 6 部分附录）。
+Put `watch_connection.py` and `watch_device.py` (full source in `watch-device-helper/` of this repo) into one directory.
 
 ---
 
-## 第 3 部分 · xtool 补丁（3 处）
+## Part 3 · xtool patches (3 sites)
 
-### 3.1 免费账号放行 App Groups
+### 3.1 Allow App Groups on free teams
 
-`Sources/XKit/DeveloperServices/App IDs/Entitlements/DeveloperServicesCapability.swift`：
+`Sources/XKit/DeveloperServices/App IDs/Entitlements/DeveloperServicesCapability.swift`:
 
 ```swift
 extension AppGroupEntitlement: EntitlementWithCapability {
     var capability: DeveloperServicesCapability {
-        DeveloperServicesCapability(.appGroups, isFree: true)   // 原为 false
+        DeveloperServicesCapability(.appGroups, isFree: true)   // was false
     }
 }
 ```
 
-### 3.2 给 Watch bundle 注入 App Group entitlement
+### 3.2 Inject an App Group entitlement for the Watch bundle
 
-`Sources/XKit/DeveloperServices/App IDs/DeveloperServicesAddAppOperation.swift`，在 `let appID = try await upsertApp(...)` **之前**插入：
+`Sources/XKit/DeveloperServices/App IDs/DeveloperServicesAddAppOperation.swift` — insert **before** `let appID = try await upsertApp(...)`:
 
 ```swift
 if isWatch,
@@ -167,30 +167,30 @@ if isWatch,
    !existing.contains(where: { $0 is AppGroupEntitlement }) {
     var patched = existing
     patched.append(AppGroupEntitlement(rawValue: [
-        .init(rawValue: "<GROUP_ID>")   // 例如 group.com.friend.hermes，必须22字节且与二进制 patch 一致
+        .init(rawValue: "<GROUP_ID>")   // e.g. group.com.yourname.hermes; 22 bytes, must match the binary patch
     ]))
     try? entitlements.setEntitlements(patched)
 }
 ```
 
-### 3.3 组 ID 原样保留
+### 3.3 Keep the group ID verbatim
 
-`Sources/XKit/DeveloperServices/App Groups/DeveloperServicesAssignAppGroupsOperation.swift`，创建组时不要再加工 ID：
+`Sources/XKit/DeveloperServices/App Groups/DeveloperServicesAssignAppGroupsOperation.swift` — create the group with the ID untouched:
 
 ```swift
 let request = DeveloperServicesAddAppGroupRequest(
     platform: .iOS,
     teamID: xcodeAuthData.teamID,
     name: ProvisioningIdentifiers.groupName(fromSanitized: sanitized),
-    groupID: groupID          // 原样传，不要用 ProvisioningIdentifiers.groupID(fromSanitized:)
+    groupID: groupID          // verbatim; do NOT regenerate via ProvisioningIdentifiers.groupID(fromSanitized:)
 )
 ```
 
-### 3.4 前提：每个内嵌 app 独立描述文件
+### 3.4 Prerequisite: per-embedded-app provisioning
 
-`ProvisioningBundle.discover` 必须遍历 `Watch/*.app`（标 `isWatch=true`），每个 bundle 单独走 App ID + 描述文件申请；`DeveloperServicesFetchProfileOperation` 在 `isWatch` 时把 **Watch UDID**（不是手机 UDID）加进 `ProvisionedDevices`。若你的基线没有这套"per-bundle provisioning"，先实现它——这是手表装得上的硬前提。
+`ProvisioningBundle.discover` must traverse `Watch/*.app` (marked `isWatch = true`), and every bundle must get its own App ID + profile. `DeveloperServicesFetchProfileOperation` must add the **Watch UDID** (not the iPhone UDID) to `ProvisionedDevices` when `isWatch`. If your base lacks per-bundle provisioning, implement it first — it is a hard requirement for the Watch to accept the app.
 
-### 3.5 构建
+### 3.5 Build
 
 ```bash
 export PATH=/opt/swift-6.4.1/usr/bin:$PATH
@@ -201,9 +201,9 @@ swift build --build-system native --pkg-config-path $prefix/lib/pkgconfig -j 4 \
   -Xlinker -rpath -Xlinker $prefix/lib --product xtool
 ```
 
-**必须带 `--build-system native`**，否则 SwiftyMobileDevice 报 `idevice_subscription_context_t` 找不到。
+**`--build-system native` is required**, otherwise `SwiftyMobileDevice` fails with `cannot find idevice_subscription_context_t`.
 
-做启动器：
+Launcher:
 
 ```bash
 sudo tee /usr/local/bin/xtool-watch <<'EOF'
@@ -215,72 +215,54 @@ EOF
 sudo chmod +x /usr/local/bin/xtool-watch
 ```
 
-登录 Apple ID：
+Sign in:
 
 ```bash
 xtool-watch auth
-# 按提示输入 Apple ID 和密码（会有苹果两步验证/设备码流程）
-xtool-watch auth status    # 确认 Team ID 已拿到
+# enter Apple ID & password, complete Apple 2FA/device-code flow
+xtool-watch auth status    # confirm the Team ID resolved
 ```
 
 ---
 
-## 第 4 部分 · 处理 HermesEnabler IPA
+## Part 4 · Prepare the HermesEnabler IPA
 
-### 4.1 下载
+### 4.1 Download
 
 ```bash
-cd ~/xtool-tmp || mkdir -p ~/xtool-tmp && cd ~/xtool-tmp
+mkdir -p ~/xtool-tmp && cd ~/xtool-tmp
 curl -L -o hermes-1.4.1.ipa https://github.com/nicegram/HermesEnabler/releases/download/1.4.1/HermesEnabler.ipa
-# 若 404，去 releases 页面看实际 asset 名
+# if 404, check the releases page for the actual asset name
 ```
 
-### 4.2 换 App Group ID（关键）
+### 4.2 Rewire the App Group ID (critical)
 
-二进制硬编码 `group.com.kamui.escape`（原作者的组，别人注册不了）。换成你账号独有的 **22 字节**组 ID。例如 `group.com.friend.hermes`（数一下：22 字符）。跑 `patch-hermes-group.py`：
-
-```python
-import zipfile, sys
-OLD = b'group.com.kamui.escape'
-NEW = sys.argv[3].encode()
-assert len(NEW) == 22 and NEW.startswith(b'group.'), 'must be 22 bytes starting with group.'
-zin = zipfile.ZipFile(sys.argv[1]); zout = zipfile.ZipFile(sys.argv[2], 'w', zipfile.ZIP_DEFLATED)
-n = 0
-for it in zin.infolist():
-    d = zin.read(it.filename)
-    if it.filename.endswith(('HermesEnabler2', 'HermesCompanion')):
-        c = d.count(OLD)
-        if c: d = d.replace(OLD, NEW); n += c; print(it.filename, c)
-    zout.writestr(it, d)
-zout.close(); print('replaced', n)
-```
+The binary hardcodes `group.com.kamui.escape` (the original developer's group — nobody else can register it; Apple replies Error 35 "not available"). Replace it with a unique **22-byte** ID from your own account, e.g. `group.com.friend.hermes` (22 chars). Use `patch-hermes-group.py` from this repo:
 
 ```bash
-python3 patch-hermes-group.py hermes-1.4.1.ipa hermes-1.4.1-grouped.ipa 'group.com.<你的ID>'
-# 预期输出 replaced 2（fat 二进制两个 slice 各一处）
+python3 patch-hermes-group.py hermes-1.4.1.ipa hermes-1.4.1-grouped.ipa 'group.com.<your-id>'
+# expected: replaced 2 (one occurrence per fat-binary slice)
 ```
 
-**这个 ID 必须和第 3.2 节补丁里的字符串一字不差。**
+**This ID must byte-for-byte match the string in patch 3.2.**
 
-### 4.3 拿配对手表 UDID
+### 4.3 Get the paired Watch UDID
 
-方法 A（最简单）：iPhone → Watch App → 我的手表 → 通用 → 关于 → 看 UDID？手表 UDID 不在那里显示。用 B。
-
-方法 B：通过 companion_proxy 读配对表。跑 `watch_device.py`（第 6 部分附录代码）：
+Watch UDID is not shown in the iOS UI. Read the pairing registry via companion_proxy:
 
 ```bash
-cd <watch-device-helper目录>
+cd <watch-device-helper dir>
 USBMUXD_SOCKET_ADDRESS=172.27.128.1:27015 \
   ~/Developer/xtool-watch-device-venv/bin/python3 \
   watch_device.py --state-directory ~/xtool-tmp/watch-device-state \
   --device-info ~/xtool-tmp/watch-info.json
 ```
 
-首次会触发手表的"信任此电脑"提示，手表上点信任（戴在手上、解锁）。成功后 `watch-info.json` 里有 `udid` 和 `name`。记下 `<WATCH_UDID>`。
+The first run triggers a "Trust This Computer" prompt **on the Watch** — accept it while wearing the watch, unlocked. Afterwards `watch-info.json` contains `udid` — that is `<WATCH_UDID>`.
 
-**坑**：手表的信任记录存在 `--state-directory` 下；删掉或换目录要重新点信任。
+**Gotcha**: the watch pairing cache lives under `--state-directory`; deleting it forces a re-trust.
 
-### 4.4 签名并装到 iPhone
+### 4.4 Sign & install to the iPhone
 
 ```bash
 xtool-watch install ~/xtool-tmp/hermes-1.4.1-grouped.ipa \
@@ -288,204 +270,69 @@ xtool-watch install ~/xtool-tmp/hermes-1.4.1-grouped.ipa \
   --signed-ipa-output ~/xtool-tmp/hermes-signed.ipa
 ```
 
-预期：`Provisioning` 阶段 Apple 给你的团队创建 `<GROUP_ID>`（免费账号可以建组，实测）→ `Signing → Packaging → Installing → Verifying → Successfully installed!`
+Expected: `Provisioning` (Apple creates `<GROUP_ID>` under your free team — yes, free teams can create app groups) → `Signing → Packaging → Installing → Verifying → Successfully installed!`
 
-**装完必须验证两个断言**：
+**Verify two assertions right after install:**
 
 ```python
 import zipfile, plistlib
 z = zipfile.ZipFile('hermes-signed.ipa')
 raw = z.read('Payload/HermesCompanion.app/Watch/HermesEnabler2.app/embedded.mobileprovision')
 p = plistlib.loads(raw[raw.find(b'<?xml'):raw.find(b'</plist>')+8])
-assert '<WATCH_UDID>' in p['ProvisionedDevices']          # 手表UDID在名单里
+assert '<WATCH_UDID>' in p['ProvisionedDevices']
 assert p['Entitlements']['com.apple.security.application-groups'] == ['<GROUP_ID>']
 ```
 
-### 4.5 装到手表（绕过 iPhone Watch App！）
+### 4.5 Install to the Watch (bypass the iOS Watch app!)
 
-iPhone Watch App 的"可用 App → 安装"走异步同步，**大概率报"无法安装，请稍后再试"**。直接绕：
+The iOS Watch app's "Available Apps → Install" uses an async sync channel that commonly fails with "Unable to install, try again later". Bypass it — push the signed `.app` straight to the watch's lockdown:
 
 ```bash
-# 从已签 IPA 解出手表 app
 cd ~/xtool-tmp
 unzip -o -q hermes-signed.ipa 'Payload/HermesCompanion.app/Watch/HermesEnabler2.app/*' -d extract
 mv 'extract/Payload/HermesCompanion.app/Watch/HermesEnabler2.app' ./HermesEnabler2.app
 
-# 直连手表推送
-cd <watch-device-helper目录>
+cd <watch-device-helper dir>
 USBMUXD_SOCKET_ADDRESS=172.27.128.1:27015 \
   ~/Developer/xtool-watch-device-venv/bin/python3 \
   watch_device.py --state-directory ~/xtool-tmp/watch-device-state \
   --install ~/xtool-tmp/HermesEnabler2.app
 ```
 
-输出 `Install: 100%` + `Installed and verified` 即成功。**手表上直接打开 HermesEnabler**。
+`Install: 100%` + `Installed and verified` = done. **Open HermesEnabler directly on the Watch.**
 
 ---
 
-## 第 5 部分 · 坑位速查
+## Part 5 · Troubleshooting table
 
-| 现象 | 原因 | 解法 |
+| Symptom | Cause | Fix |
 |---|---|---|
-| `Error 35 ... group.com.kamui.escape is not available` | 组 ID 被原作者占用 | 第 4.2 节换自有 ID |
-| `idevice_subscription_context_t` 编译错 | 少 `--build-system native` | 第 3.5 节 |
-| `No device found` / 设备时有时无 | iPhone 锁屏 | 解锁亮屏重来 |
-| 手表"无法安装请稍后再试" | iPhone Watch App 同步通道问题 | 第 4.5 节直连安装 |
-| 手表"无法验证其完整性" | 描述文件缺 Watch UDID 或 Watch app 无独立 profile | 检查 4.4 两个断言 |
-| 手表要求"信任此电脑" | 手表配对缓存是新的 | 戴表解锁，用 4.5 工具触发后点信任 |
-| 运行报 MobileGestalt 但组 ID 显示正常 | 该 watchOS 版本 escape 路径本身失效（上游 issue #7） | 非签名问题，等作者更新 |
-| `swift: command not found` | 新 shell 没 source PATH | `export PATH=/opt/swift-6.4.1/usr/bin:$PATH` |
-| 7 天后 app 打不开 | 免费账号证书过期 | 重跑 4.4 + 4.5 |
+| `Error 35 ... group.com.kamui.escape is not available` | Group ID owned by the original dev | 4.2 — use your own ID |
+| `idevice_subscription_context_t` compile error | missing `--build-system native` | 3.5 |
+| `No device found` / device flickers | iPhone locked | unlock & retry |
+| Watch "Unable to install, try again later" | iOS Watch-app sync channel | 4.5 — direct install |
+| Watch "cannot verify its integrity" | profile lacks Watch UDID / no per-watch profile | re-check 4.4 assertions |
+| Watch asks "Trust This Computer" | fresh pairing cache | wear & unlock watch, accept when the helper triggers it |
+| Runtime "MobileGestalt Access Failed" with correct group | escape path broken on this watchOS (upstream issue #7) | not a signing issue; wait for upstream fix |
+| `swift: command not found` | new shell without PATH | `export PATH=/opt/swift-6.4.1/usr/bin:$PATH` |
+| App stops opening after 7 days | free-account profile expiry | rerun 4.4 + 4.5 |
 
 ---
 
-## 第 6 部分 · 附录：watch_device.py 依赖的两份文件
+## Part 6 · Repo contents
 
-### `watch_connection.py`
-
-```python
-import asyncio
-from pathlib import Path
-from pymobiledevice3.lockdown import PlistUsbmuxLockdownClient, create_using_usbmux
-from pymobiledevice3.service_connection import ServiceConnection
-from pymobiledevice3.services.companion import CompanionProxyService
-
-class CompanionWatchLockdownClient(PlistUsbmuxLockdownClient):
-    def __init__(self, *args, phone, proxy, ports, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.phone, self.proxy, self.ports = phone, proxy, ports
-    async def create_service_connection(self, remote_port):
-        local_port = await asyncio.wait_for(self.proxy.start_forwarding_service_port(remote_port), 8)
-        if local_port is None:
-            raise RuntimeError("Cannot forward requested Watch service.")
-        self.ports.add(remote_port)
-        return await asyncio.wait_for(ServiceConnection.create_using_usbmux(self.phone.udid, local_port), 8)
-
-class WatchConnection:
-    def __init__(self, directory: Path, pair_watch=False):
-        self.directory, self.pair_watch = directory, pair_watch
-        self.phone = self.watch = self.proxy = self.initial_service = None
-        self.ports = set()
-    async def __aenter__(self):
-        try:
-            self.phone = await asyncio.wait_for(create_using_usbmux(autopair=False, connection_type="USB"), 8)
-            self.proxy = CompanionProxyService(self.phone)
-            registry = await asyncio.wait_for(self.proxy.list(), 8)
-            if len(registry) != 1:
-                raise RuntimeError("Expected exactly one paired Watch.")
-            port = await asyncio.wait_for(self.proxy.start_forwarding_service_port(62078), 8)
-            if port is None:
-                raise RuntimeError("Cannot forward Watch lockdown service.")
-            self.ports.add(62078)
-            cache = self.directory / "watch-pairing"
-            service = await asyncio.wait_for(ServiceConnection.create_using_usbmux(self.phone.udid, port), 8)
-            self.initial_service = service
-            self.watch = await asyncio.wait_for(CompanionWatchLockdownClient.create(
-                service, identifier=registry[0], port=62078, autopair=False,
-                pairing_records_cache_folder=cache, system_buid=self.phone.system_buid,
-                phone=self.phone, proxy=self.proxy, ports=self.ports), 15)
-            if not self.watch.paired and self.pair_watch:
-                await asyncio.wait_for(self.watch.pair(timeout=30), 35)
-            if not self.watch.paired:
-                raise RuntimeError("The Watch must first trust this PC.")
-            if self.watch.all_values.get("DeviceClass") != "Watch":
-                raise RuntimeError("Connection did not reach an Apple Watch.")
-            return self.watch
-        except BaseException:
-            await self.__aexit__(None, None, None)
-            raise
-    async def __aexit__(self, *_):
-        try:
-            if self.watch is not None:
-                await asyncio.wait_for(self.watch.close(), 5)
-            elif self.initial_service is not None:
-                await asyncio.wait_for(self.initial_service.close(), 5)
-        finally:
-            try:
-                if self.proxy is not None:
-                    for port in sorted(self.ports, reverse=True):
-                        try:
-                            await asyncio.wait_for(self.proxy.stop_forwarding_service_port(port), 5)
-                        except Exception:
-                            pass
-                    await asyncio.wait_for(self.proxy.close(), 5)
-            finally:
-                if self.phone is not None:
-                    await asyncio.wait_for(self.phone.close(), 5)
 ```
-
-### `watch_device.py`
-
-```python
-import argparse, asyncio, json
-from pathlib import Path
-import plistlib
-from zipfile import ZipFile
-from pymobiledevice3.services.installation_proxy import InstallationProxyService
-from pymobiledevice3.services.streaming_zip_conduit import StreamingZipConduitService
-from watch_connection import WatchConnection
-
-def package_info(package):
-    if package.is_dir() and package.suffix == ".app":
-        info = plistlib.loads((package / "Info.plist").read_bytes())
-    else:
-        with ZipFile(package) as archive:
-            candidates = [n for n in archive.namelist()
-                          if n.startswith("Payload/") and n.count("/") == 2 and n.endswith("/Info.plist")]
-            if len(candidates) != 1:
-                raise ValueError("Expected a single Watch app payload.")
-            info = plistlib.loads(archive.read(candidates[0]))
-    if info.get("WKApplication") is not True or info.get("CFBundleSupportedPlatforms") != ["WatchOS"]:
-        raise ValueError("Expected a watchOS device app.")
-    return info
-
-async def main(args):
-    info = package_info(args.install) if args.install else None
-    async with WatchConnection(args.state_directory, pair_watch=args.pair) as watch:
-        enabled = await watch.get_developer_mode_status()
-        print(json.dumps({"watch_connected": True, "developer_mode": enabled}), flush=True)
-        if args.device_info:
-            with args.device_info.open("x", encoding="utf-8") as f:
-                json.dump({"udid": watch.all_values["UniqueDeviceID"],
-                           "name": watch.all_values.get("DeviceName", "Apple Watch")}, f)
-        if info is None:
-            return
-        if not enabled:
-            raise RuntimeError("Enable Developer Mode on the Watch first.")
-        async with StreamingZipConduitService(watch) as conduit:
-            await conduit.install(args.install, developer=True,
-                                  handler=lambda v: print(f"Install: {v}%", flush=True))
-        async with InstallationProxyService(watch) as installer:
-            result = await installer.service.send_recv_plist(
-                {"Command": "Lookup", "ClientOptions": {"BundleIDs": [info["CFBundleIdentifier"]]}})
-            if info["CFBundleIdentifier"] not in result.get("LookupResult", {}):
-                raise RuntimeError("Install completed but lookup failed.")
-        print("Installed and verified in the Watch app registry.", flush=True)
-
-def run():
-    p = argparse.ArgumentParser()
-    p.add_argument("--state-directory", type=Path, default=Path(".watchos"))
-    p.add_argument("--pair", action="store_true")
-    p.add_argument("--device-info", type=Path)
-    p.add_argument("--install", type=Path)
-    args = p.parse_args()
-    args.state_directory.mkdir(parents=True, exist_ok=True)
-    try:
-        asyncio.run(asyncio.wait_for(main(args), 120))
-    except Exception as e:
-        if isinstance(e, (ValueError, RuntimeError)) or type(e).__name__ in {"AppInstallError", "StreamingZipConduitError"}:
-            print(str(e), flush=True)
-        print(f"Deployment stopped: {type(e).__name__}", flush=True)
-        raise SystemExit(1)
-
-if __name__ == "__main__":
-    run()
+README.md                  this guide (English)
+README.zh-CN.md            中文完整版
+patch-hermes-group.py      App Group ID rewriter (22-byte, same-length replace)
+probe-paired-watch.py      ctypes helper: dump paired-watch registry via companion_proxy
+watch-device-helper/
+  watch_connection.py      CompanionWatchLockdownClient + WatchConnection
+  watch_device.py          CLI: query watch info / push a signed .app to the watch
 ```
-
-两文件放同一目录，`watch_device.py` import `watch_connection`。
 
 ---
 
-## 一句话总结流程
+## One-line summary
 
-装 Apple Devices → 装 WSL+Swift+libimobiledevice → clone xtool 打 3 个补丁并构建 → `xtool-watch auth` 登录 → patch IPA 里的组 ID → `xtool-watch install` 装 iPhone → 用 `watch_device.py` 直连手表推送 .app → 手表打开。
+Install Apple Devices → set up WSL + Swift + libimobiledevice → clone xtool, apply 3 patches, build → `xtool-watch auth` → patch the group ID in the IPA → `xtool-watch install` to the iPhone → push the `.app` to the watch with `watch_device.py` → open on the watch.
