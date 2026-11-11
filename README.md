@@ -1,64 +1,47 @@
-# HermesEnabler 装到 Apple Watch 全流程手册（Windows + WSL + 免费 Apple 账号，零 Mac）
+﻿# HermesEnabler 瑁呭埌 Apple Watch 鍏ㄦ祦绋嬫墜鍐岋紙Windows + WSL + 鍏嶈垂 Apple 璐﹀彿锛岄浂 Mac锛?
+**涓枃 | [English](README.en.md)**
 
-**中文 | [English](README.en.md)**
-
-> **执行工具建议**：推荐用 **DeepSeek Harness**（dsh）跑本流程——整套工作流涉及二进制 patch、Apple 签名、设备直连等操作，Codex 等受严格安全协议约束的 agent 会在中途被拦截或要求逐步审批，打断流程。DeepSeek Harness 提供 unrestricted sandbox 模式，能顺畅跑完。
->
-> **给 AI agent 的说明**：这是一份从头开始的完整操作手册，不要跳过任何"自检"步骤。
-> 所有路径里的 `champ`、`<DEPS_PREFIX>`、`<WATCH_UDID>`、`<PHONE_UDID>`、`<GROUP_ID>` 是占位符，按实际值替换。
-> 已验证环境：Windows 11 + WSL2 Ubuntu 24.04、Swift 6.4.1、libimobiledevice 1.4.0、iPhone（iOS 27.0.1）、Apple Watch（watchOS 27.2）、免费 Apple ID。
-
+> **鑷磋阿**锛氭湰鏁欑▼鍙槸渚ц浇鏂规硶鈥斺€旂湡姝ｇ殑鍔熻嚕鏄?[HermesEnabler](https://github.com/pookjw/HermesEnabler) 鍙婂叾鍘熶綔鑰?**pookjw**锛圝inwoo Kim锛夈€傛病鏈変粬鍋氱殑琛ㄧ洏缁曡繃宸ュ叿锛屽氨娌℃湁杩欎釜鏁欑▼瀛樺湪鐨勬剰涔夈€?>
+> **鎵ц宸ュ叿寤鸿**锛氭帹鑽愮敤 **DeepSeek Harness**锛坉sh锛夎窇鏈祦绋嬧€斺€旀暣濂楀伐浣滄祦娑夊強浜岃繘鍒?patch銆丄pple 绛惧悕銆佽澶囩洿杩炵瓑鎿嶄綔锛孋odex 绛夊彈涓ユ牸瀹夊叏鍗忚绾︽潫鐨?agent 浼氬湪涓€旇鎷︽埅鎴栬姹傞€愭瀹℃壒锛屾墦鏂祦绋嬨€侱eepSeek Harness 鎻愪緵 unrestricted sandbox 妯″紡锛岃兘椤虹晠璺戝畬銆?>
+> **缁?AI agent 鐨勮鏄?*锛氳繖鏄竴浠戒粠澶村紑濮嬬殑瀹屾暣鎿嶄綔鎵嬪唽锛屼笉瑕佽烦杩囦换浣?鑷"姝ラ銆?> 鎵€鏈夎矾寰勯噷鐨?`champ`銆乣<DEPS_PREFIX>`銆乣<WATCH_UDID>`銆乣<PHONE_UDID>`銆乣<GROUP_ID>` 鏄崰浣嶇锛屾寜瀹為檯鍊兼浛鎹€?> 宸查獙璇佺幆澧冿細Windows 11 + WSL2 Ubuntu 24.04銆丼wift 6.4.1銆乴ibimobiledevice 1.4.0銆乮Phone锛坕OS 27.0.1锛夈€丄pple Watch锛坵atchOS 27.2锛夈€佸厤璐?Apple ID銆?
 ---
 
-## 第 0 部分 · 硬件与账号准备
-
-| 项 | 要求 | 检查方法 |
+## 绗?0 閮ㄥ垎 路 纭欢涓庤处鍙峰噯澶?
+| 椤?| 瑕佹眰 | 妫€鏌ユ柟娉?|
 |---|---|---|
-| 电脑 | Windows 10/11，能用 WSL2 | `wsl --status` |
-| iPhone | USB 连电脑，点过"信任此电脑" | 插线后 iPhone 弹信任框 |
-| Apple Watch | 已与 iPhone 配对，佩戴且解锁 | 手表能正常看表盘 |
-| Apple 账号 | **免费** Apple ID 即可，无需付费开发者 | 记住账号密码，后面 `xtool auth` 要用 |
-| iPhone 开发者模式 | 设置 → 隐私与安全性 → 开发者模式 → 开 | 开关在最底部，开了要重启一次手机 |
-| 手表开发者模式 | 手表 设置 → 隐私与安全性 → 开发者模式 → 开 | **开关默认隐藏**，需先做 2.6 的 reveal 步骤 |
+| 鐢佃剳 | Windows 10/11锛岃兘鐢?WSL2 | `wsl --status` |
+| iPhone | USB 杩炵數鑴戯紝鐐硅繃"淇′换姝ょ數鑴? | 鎻掔嚎鍚?iPhone 寮逛俊浠绘 |
+| Apple Watch | 宸蹭笌 iPhone 閰嶅锛屼僵鎴翠笖瑙ｉ攣 | 鎵嬭〃鑳芥甯哥湅琛ㄧ洏 |
+| Apple 璐﹀彿 | **鍏嶈垂** Apple ID 鍗冲彲锛屾棤闇€浠樿垂寮€鍙戣€?| 璁颁綇璐﹀彿瀵嗙爜锛屽悗闈?`xtool auth` 瑕佺敤 |
+| iPhone 寮€鍙戣€呮ā寮?| 璁剧疆 鈫?闅愮涓庡畨鍏ㄦ€?鈫?寮€鍙戣€呮ā寮?鈫?寮€ | 寮€鍏冲湪鏈€搴曢儴锛屽紑浜嗚閲嶅惎涓€娆℃墜鏈?|
+| 鎵嬭〃寮€鍙戣€呮ā寮?| 鎵嬭〃 璁剧疆 鈫?闅愮涓庡畨鍏ㄦ€?鈫?寮€鍙戣€呮ā寮?鈫?寮€ | **寮€鍏抽粯璁ら殣钘?*锛岄渶鍏堝仛 2.6 鐨?reveal 姝ラ |
 
 ---
 
-## 第 1 部分 · Windows 侧软件
+## 绗?1 閮ㄥ垎 路 Windows 渚ц蒋浠?
+### 1.1 瀹夎 Apple Devices锛堟垨 iTunes锛?
+浣滅敤锛氭彁渚?`AppleMobileDeviceService`锛屽畠鍦ㄦ湰鏈?`127.0.0.1:27015` 璺?usbmuxd锛屾槸 WSL 涓?iPhone 閫氫俊鐨勬ˉ銆?
+- Microsoft Store 鎼?**"Apple Devices"** 瀹夎锛堟垨瑁?iTunes锛夈€?- 鎻?iPhone锛岀瓑 Windows 璇嗗埆锛宨Phone 涓婄偣"淇′换"銆?- 楠岃瘉锛歚netstat -ano | findstr ":27015"` 搴旂湅鍒?`127.0.0.1:27015 LISTENING`锛岃繘绋嬪悕 `AppleMobileDeviceService`銆?
+### 1.2 瀹夎 WSL2 + Ubuntu 24.04
 
-### 1.1 安装 Apple Devices（或 iTunes）
-
-作用：提供 `AppleMobileDeviceService`，它在本机 `127.0.0.1:27015` 跑 usbmuxd，是 WSL 与 iPhone 通信的桥。
-
-- Microsoft Store 搜 **"Apple Devices"** 安装（或装 iTunes）。
-- 插 iPhone，等 Windows 识别，iPhone 上点"信任"。
-- 验证：`netstat -ano | findstr ":27015"` 应看到 `127.0.0.1:27015 LISTENING`，进程名 `AppleMobileDeviceService`。
-
-### 1.2 安装 WSL2 + Ubuntu 24.04
-
-PowerShell（管理员）：
+PowerShell锛堢鐞嗗憳锛夛細
 
 ```powershell
 wsl --install -d Ubuntu-24.04
 ```
 
-装完启动一次，创建 Linux 用户（假设用户名 `champ`，全程用它）。
-
-### 1.3 WSL 网关地址（关键！）
-
-WSL 不能直接连 Windows 的 127.0.0.1，要走网关。查网关 IP：
-
+瑁呭畬鍚姩涓€娆★紝鍒涘缓 Linux 鐢ㄦ埛锛堝亣璁剧敤鎴峰悕 `champ`锛屽叏绋嬬敤瀹冿級銆?
+### 1.3 WSL 缃戝叧鍦板潃锛堝叧閿紒锛?
+WSL 涓嶈兘鐩存帴杩?Windows 鐨?127.0.0.1锛岃璧扮綉鍏炽€傛煡缃戝叧 IP锛?
 ```bash
-# WSL 内
-ip route show default | awk '{print $3}'     # 例如输出 172.27.128.1
+# WSL 鍐?ip route show default | awk '{print $3}'     # 渚嬪杈撳嚭 172.27.128.1
 ```
 
-本手册统一用 `USBMUXD_SOCKET_ADDRESS=172.27.128.1:27015`——把 IP 换成你查到的网关。原理：Windows 的 WSL 转发把 WSL 网关地址上的端口映射到 Windows localhost 同名端口，于是 WSL 里连 `网关IP:27015` = 连 Windows 的 usbmuxd。
-
+鏈墜鍐岀粺涓€鐢?`USBMUXD_SOCKET_ADDRESS=172.27.128.1:27015`鈥斺€旀妸 IP 鎹㈡垚浣犳煡鍒扮殑缃戝叧銆傚師鐞嗭細Windows 鐨?WSL 杞彂鎶?WSL 缃戝叧鍦板潃涓婄殑绔彛鏄犲皠鍒?Windows localhost 鍚屽悕绔彛锛屼簬鏄?WSL 閲岃繛 `缃戝叧IP:27015` = 杩?Windows 鐨?usbmuxd銆?
 ---
 
-## 第 2 部分 · WSL 内环境搭建
-
-### 2.1 基础构建工具
+## 绗?2 閮ㄥ垎 路 WSL 鍐呯幆澧冩惌寤?
+### 2.1 鍩虹鏋勫缓宸ュ叿
 
 ```bash
 sudo apt update
@@ -66,31 +49,26 @@ sudo apt install -y build-essential git curl wget pkg-config autoconf automake l
   libssl-dev libplist-dev unzip zip python3 python3-venv python3-pip
 ```
 
-### 2.2 Swift 6.4.x 工具链
-
+### 2.2 Swift 6.4.x 宸ュ叿閾?
 ```bash
-# 下载 Swift 6.4.1 Ubuntu 24.04 版（官网 swift.org/install/linux）
-cd /tmp
+# 涓嬭浇 Swift 6.4.1 Ubuntu 24.04 鐗堬紙瀹樼綉 swift.org/install/linux锛?cd /tmp
 curl -LO https://download.swift.org/swift-6.4.1-release/ubuntu2404/swift-6.4.1-RELEASE/swift-6.4.1-RELEASE-ubuntu24.04.tar.gz
 sudo mkdir -p /opt/swift-6.4.1
 sudo tar -xzf swift-6.4.1-RELEASE-ubuntu24.04.tar.gz -C /opt/swift-6.4.1 --strip-components=1
 echo 'export PATH=/opt/swift-6.4.1/usr/bin:$PATH' >> ~/.bashrc
 export PATH=/opt/swift-6.4.1/usr/bin:$PATH
-swift --version   # 应输出 Swift version 6.4.1
+swift --version   # 搴旇緭鍑?Swift version 6.4.1
 ```
 
-还需要 Swift 的 Linux 运行依赖（缺什么按报错补）：
-
+杩橀渶瑕?Swift 鐨?Linux 杩愯渚濊禆锛堢己浠€涔堟寜鎶ラ敊琛ワ級锛?
 ```bash
 sudo apt install -y binutils gnupg2 libc6-dev libcurl4-openssl-dev libedit2 \
   libgcc-13-dev libpython3-dev libstdc++-13-dev libxml2-dev libz3-dev \
   pkg-config tzdata unzip zlib1g-dev libncurses-dev libsqlite3-dev
 ```
 
-### 2.3 libimobiledevice 1.4 全家桶（源码编译）
-
-xtool 的设备交互层依赖这些库的最新版（Ubuntu 源里的太旧），编译到独立前缀：
-
+### 2.3 libimobiledevice 1.4 鍏ㄥ妗讹紙婧愮爜缂栬瘧锛?
+xtool 鐨勮澶囦氦浜掑眰渚濊禆杩欎簺搴撶殑鏈€鏂扮増锛圲buntu 婧愰噷鐨勫お鏃э級锛岀紪璇戝埌鐙珛鍓嶇紑锛?
 ```bash
 mkdir -p ~/Developer/xtool-native-deps/{src,prefix}
 base=~/Developer/xtool-native-deps
@@ -113,113 +91,95 @@ build_dep libtatsu 1.0.4
 build_dep libimobiledevice 1.4.0
 ```
 
-**注意**：`--without-tools` 不带 `idevice_*` 命令行工具。本手册的诊断命令（`idevice_id`、`ideviceinfo`）需要 tools——把最后一项 `libimobiledevice` 的构建参数去掉 `--without-tools` 再编一次即可，或单独装 `apt install libimobiledevice-tools` 做诊断。
-
-自检（iPhone 解锁亮屏插着 USB）：
+**娉ㄦ剰**锛歚--without-tools` 涓嶅甫 `idevice_*` 鍛戒护琛屽伐鍏枫€傛湰鎵嬪唽鐨勮瘖鏂懡浠わ紙`idevice_id`銆乣ideviceinfo`锛夐渶瑕?tools鈥斺€旀妸鏈€鍚庝竴椤?`libimobiledevice` 鐨勬瀯寤哄弬鏁板幓鎺?`--without-tools` 鍐嶇紪涓€娆″嵆鍙紝鎴栧崟鐙 `apt install libimobiledevice-tools` 鍋氳瘖鏂€?
+鑷锛坕Phone 瑙ｉ攣浜睆鎻掔潃 USB锛夛細
 
 ```bash
 export USBMUXD_SOCKET_ADDRESS=172.27.128.1:27015
-idevice_id -l                       # 输出 <PHONE_UDID>
-ideviceinfo -k DeviceName           # 输出手机名
-ideviceinfo -k PasswordProtected    # 必须 false
+idevice_id -l                       # 杈撳嚭 <PHONE_UDID>
+ideviceinfo -k DeviceName           # 杈撳嚭鎵嬫満鍚?ideviceinfo -k PasswordProtected    # 蹇呴』 false
 ```
 
-**坑**：iPhone 锁屏时 `idevice_id` 会先列出设备随即消失，所有后续命令报 `No device found`。全程保持手机解锁。
-
-### 2.4 xtool 源码（fork：xtool-watch）
-
+**鍧?*锛歩Phone 閿佸睆鏃?`idevice_id` 浼氬厛鍒楀嚭璁惧闅忓嵆娑堝け锛屾墍鏈夊悗缁懡浠ゆ姤 `No device found`銆傚叏绋嬩繚鎸佹墜鏈鸿В閿併€?
+### 2.4 xtool 婧愮爜锛坒ork锛歺tool-watch锛?
 ```bash
 cd ~/Developer
 git clone https://github.com/xtool-org/xtool.git xtool-watch-fix
 cd xtool-watch-fix && git checkout 1.24.0
 ```
 
-然后按**第 3 部分**打补丁。
-
-### 2.5 pymobiledevice3（直连手表用）
-
+鐒跺悗鎸?*绗?3 閮ㄥ垎**鎵撹ˉ涓併€?
+### 2.5 pymobiledevice3锛堢洿杩炴墜琛ㄧ敤锛?
 ```bash
 python3 -m venv ~/Developer/xtool-watch-device-venv
 ~/Developer/xtool-watch-device-venv/bin/pip install pymobiledevice3
 ```
 
-再把 `watch_connection.py` 和 `watch_device.py` 两个文件放到一个目录（本手册配套文件在 `work/watch-device-helper/`，内容见第 6 部分附录）。
-
-### 2.6 让手表显示"开发者模式"开关（关键前置，别跳过）
-
-**手表的"开发者模式"开关默认是隐藏的**——和 iPhone 一样，要先用一台"开发机器"连上去请求 reveal，开关才会出现在 手表 设置 → 隐私与安全性 里。macOS 上 Xcode 连一次就自动 reveal；没有 Mac 的话用 amfi lockdown 服务手动发 reveal 请求：
-
+鍐嶆妸 `watch_connection.py` 鍜?`watch_device.py` 涓や釜鏂囦欢鏀惧埌涓€涓洰褰曪紙鏈墜鍐岄厤濂楁枃浠跺湪 `work/watch-device-helper/`锛屽唴瀹硅绗?6 閮ㄥ垎闄勫綍锛夈€?
+### 2.6 璁╂墜琛ㄦ樉绀?寮€鍙戣€呮ā寮?寮€鍏筹紙鍏抽敭鍓嶇疆锛屽埆璺宠繃锛?
+**鎵嬭〃鐨?寮€鍙戣€呮ā寮?寮€鍏抽粯璁ゆ槸闅愯棌鐨?*鈥斺€斿拰 iPhone 涓€鏍凤紝瑕佸厛鐢ㄤ竴鍙?寮€鍙戞満鍣?杩炰笂鍘昏姹?reveal锛屽紑鍏虫墠浼氬嚭鐜板湪 鎵嬭〃 璁剧疆 鈫?闅愮涓庡畨鍏ㄦ€?閲屻€俶acOS 涓?Xcode 杩炰竴娆″氨鑷姩 reveal锛涙病鏈?Mac 鐨勮瘽鐢?amfi lockdown 鏈嶅姟鎵嬪姩鍙?reveal 璇锋眰锛?
 ```bash
-cd <watch-device-helper目录>
+cd <watch-device-helper鐩綍>
 USBMUXD_SOCKET_ADDRESS=172.27.128.1:27015 \
   ~/Developer/xtool-watch-device-venv/bin/python3 \
   watch_device.py --state-directory ~/xtool-tmp/watch-device-state \
   --pair --reveal-developer-mode
 ```
 
-执行流程：工具通过 iPhone 的 companion_proxy 直连手表 → 首次触发手表"信任此电脑"（戴表解锁点信任，配对记录存进 `--state-directory`）→ 向手表 amfi 服务发 `{"action": 0}` reveal 请求 → 打印提示。
-
-然后到手表上操作：**手表 设置 → 隐私与安全性 → 最底部现在出现"开发者模式"→ 打开 → 手表会要求重启 → 重启后在手表上确认一次"启用开发者模式"**。
-
-验证开关已生效：
-
+鎵ц娴佺▼锛氬伐鍏烽€氳繃 iPhone 鐨?companion_proxy 鐩磋繛鎵嬭〃 鈫?棣栨瑙﹀彂鎵嬭〃"淇′换姝ょ數鑴?锛堟埓琛ㄨВ閿佺偣淇′换锛岄厤瀵硅褰曞瓨杩?`--state-directory`锛夆啋 鍚戞墜琛?amfi 鏈嶅姟鍙?`{"action": 0}` reveal 璇锋眰 鈫?鎵撳嵃鎻愮ず銆?
+鐒跺悗鍒版墜琛ㄤ笂鎿嶄綔锛?*鎵嬭〃 璁剧疆 鈫?闅愮涓庡畨鍏ㄦ€?鈫?鏈€搴曢儴鐜板湪鍑虹幇"寮€鍙戣€呮ā寮?鈫?鎵撳紑 鈫?鎵嬭〃浼氳姹傞噸鍚?鈫?閲嶅惎鍚庡湪鎵嬭〃涓婄‘璁や竴娆?鍚敤寮€鍙戣€呮ā寮?**銆?
+楠岃瘉寮€鍏冲凡鐢熸晥锛?
 ```bash
 watch_device.py --state-directory ~/xtool-tmp/watch-device-state
-# 输出应含 "developer_mode": true
+# 杈撳嚭搴斿惈 "developer_mode": true
 ```
 
-若为 `false`，回到手表设置里确认开关真的开了且重启完成。
-
+鑻ヤ负 `false`锛屽洖鍒版墜琛ㄨ缃噷纭寮€鍏崇湡鐨勫紑浜嗕笖閲嶅惎瀹屾垚銆?
 ---
 
-## 第 3 部分 · xtool 补丁（3 处）
+## 绗?3 閮ㄥ垎 路 xtool 琛ヤ竵锛? 澶勶級
 
-### 3.1 免费账号放行 App Groups
+### 3.1 鍏嶈垂璐﹀彿鏀捐 App Groups
 
-`Sources/XKit/DeveloperServices/App IDs/Entitlements/DeveloperServicesCapability.swift`：
-
+`Sources/XKit/DeveloperServices/App IDs/Entitlements/DeveloperServicesCapability.swift`锛?
 ```swift
 extension AppGroupEntitlement: EntitlementWithCapability {
     var capability: DeveloperServicesCapability {
-        DeveloperServicesCapability(.appGroups, isFree: true)   // 原为 false
+        DeveloperServicesCapability(.appGroups, isFree: true)   // 鍘熶负 false
     }
 }
 ```
 
-### 3.2 给 Watch bundle 注入 App Group entitlement
+### 3.2 缁?Watch bundle 娉ㄥ叆 App Group entitlement
 
-`Sources/XKit/DeveloperServices/App IDs/DeveloperServicesAddAppOperation.swift`，在 `let appID = try await upsertApp(...)` **之前**插入：
-
+`Sources/XKit/DeveloperServices/App IDs/DeveloperServicesAddAppOperation.swift`锛屽湪 `let appID = try await upsertApp(...)` **涔嬪墠**鎻掑叆锛?
 ```swift
 if isWatch,
    let existing = try? entitlements.entitlements(),
    !existing.contains(where: { $0 is AppGroupEntitlement }) {
     var patched = existing
     patched.append(AppGroupEntitlement(rawValue: [
-        .init(rawValue: "<GROUP_ID>")   // 例如 group.com.friend.hermes，必须22字节且与二进制 patch 一致
-    ]))
+        .init(rawValue: "<GROUP_ID>")   // 渚嬪 group.com.friend.hermes锛屽繀椤?2瀛楄妭涓斾笌浜岃繘鍒?patch 涓€鑷?    ]))
     try? entitlements.setEntitlements(patched)
 }
 ```
 
-### 3.3 组 ID 原样保留
+### 3.3 缁?ID 鍘熸牱淇濈暀
 
-`Sources/XKit/DeveloperServices/App Groups/DeveloperServicesAssignAppGroupsOperation.swift`，创建组时不要再加工 ID：
-
+`Sources/XKit/DeveloperServices/App Groups/DeveloperServicesAssignAppGroupsOperation.swift`锛屽垱寤虹粍鏃朵笉瑕佸啀鍔犲伐 ID锛?
 ```swift
 let request = DeveloperServicesAddAppGroupRequest(
     platform: .iOS,
     teamID: xcodeAuthData.teamID,
     name: ProvisioningIdentifiers.groupName(fromSanitized: sanitized),
-    groupID: groupID          // 原样传，不要用 ProvisioningIdentifiers.groupID(fromSanitized:)
+    groupID: groupID          // 鍘熸牱浼狅紝涓嶈鐢?ProvisioningIdentifiers.groupID(fromSanitized:)
 )
 ```
 
-### 3.4 前提：每个内嵌 app 独立描述文件
+### 3.4 鍓嶆彁锛氭瘡涓唴宓?app 鐙珛鎻忚堪鏂囦欢
 
-`ProvisioningBundle.discover` 必须遍历 `Watch/*.app`（标 `isWatch=true`），每个 bundle 单独走 App ID + 描述文件申请；`DeveloperServicesFetchProfileOperation` 在 `isWatch` 时把 **Watch UDID**（不是手机 UDID）加进 `ProvisionedDevices`。若你的基线没有这套"per-bundle provisioning"，先实现它——这是手表装得上的硬前提。
-
-### 3.5 构建
+`ProvisioningBundle.discover` 蹇呴』閬嶅巻 `Watch/*.app`锛堟爣 `isWatch=true`锛夛紝姣忎釜 bundle 鍗曠嫭璧?App ID + 鎻忚堪鏂囦欢鐢宠锛沗DeveloperServicesFetchProfileOperation` 鍦?`isWatch` 鏃舵妸 **Watch UDID**锛堜笉鏄墜鏈?UDID锛夊姞杩?`ProvisionedDevices`銆傝嫢浣犵殑鍩虹嚎娌℃湁杩欏"per-bundle provisioning"锛屽厛瀹炵幇瀹冣€斺€旇繖鏄墜琛ㄨ寰椾笂鐨勭‖鍓嶆彁銆?
+### 3.5 鏋勫缓
 
 ```bash
 export PATH=/opt/swift-6.4.1/usr/bin:$PATH
@@ -230,10 +190,8 @@ swift build --build-system native --pkg-config-path $prefix/lib/pkgconfig -j 4 \
   -Xlinker -rpath -Xlinker $prefix/lib --product xtool
 ```
 
-**必须带 `--build-system native`**，否则 SwiftyMobileDevice 报 `idevice_subscription_context_t` 找不到。
-
-做启动器：
-
+**蹇呴』甯?`--build-system native`**锛屽惁鍒?SwiftyMobileDevice 鎶?`idevice_subscription_context_t` 鎵句笉鍒般€?
+鍋氬惎鍔ㄥ櫒锛?
 ```bash
 sudo tee /usr/local/bin/xtool-watch <<'EOF'
 #!/bin/sh
@@ -244,30 +202,26 @@ EOF
 sudo chmod +x /usr/local/bin/xtool-watch
 ```
 
-登录 Apple ID：
-
+鐧诲綍 Apple ID锛?
 ```bash
 xtool-watch auth
-# 按提示输入 Apple ID 和密码（会有苹果两步验证/设备码流程）
-xtool-watch auth status    # 确认 Team ID 已拿到
-```
+# 鎸夋彁绀鸿緭鍏?Apple ID 鍜屽瘑鐮侊紙浼氭湁鑻规灉涓ゆ楠岃瘉/璁惧鐮佹祦绋嬶級
+xtool-watch auth status    # 纭 Team ID 宸叉嬁鍒?```
 
 ---
 
-## 第 4 部分 · 处理 HermesEnabler IPA
+## 绗?4 閮ㄥ垎 路 澶勭悊 HermesEnabler IPA
 
-### 4.1 下载
+### 4.1 涓嬭浇
 
 ```bash
 cd ~/xtool-tmp || mkdir -p ~/xtool-tmp && cd ~/xtool-tmp
-curl -L -o hermes-1.4.1.ipa https://github.com/nicegram/HermesEnabler/releases/download/1.4.1/HermesEnabler.ipa
-# 若 404，去 releases 页面看实际 asset 名
-```
+curl -L -o hermes-1.4.1.ipa https://github.com/pookjw/HermesEnabler/releases/download/1.4.1/HermesEnabler.ipa
+# 鑻?404锛屽幓 releases 椤甸潰鐪嬪疄闄?asset 鍚?```
 
-### 4.2 换 App Group ID（关键）
+### 4.2 鎹?App Group ID锛堝叧閿級
 
-二进制硬编码 `group.com.kamui.escape`（原作者的组，别人注册不了）。换成你账号独有的 **22 字节**组 ID。例如 `group.com.friend.hermes`（数一下：22 字符）。跑 `patch-hermes-group.py`：
-
+浜岃繘鍒剁‖缂栫爜 `group.com.kamui.escape`锛堝師浣滆€呯殑缁勶紝鍒汉娉ㄥ唽涓嶄簡锛夈€傛崲鎴愪綘璐﹀彿鐙湁鐨?**22 瀛楄妭**缁?ID銆備緥濡?`group.com.friend.hermes`锛堟暟涓€涓嬶細22 瀛楃锛夈€傝窇 `patch-hermes-group.py`锛?
 ```python
 import zipfile, sys
 OLD = b'group.com.kamui.escape'
@@ -285,31 +239,28 @@ zout.close(); print('replaced', n)
 ```
 
 ```bash
-python3 patch-hermes-group.py hermes-1.4.1.ipa hermes-1.4.1-grouped.ipa 'group.com.<你的ID>'
-# 预期输出 replaced 2（fat 二进制两个 slice 各一处）
+python3 patch-hermes-group.py hermes-1.4.1.ipa hermes-1.4.1-grouped.ipa 'group.com.<浣犵殑ID>'
+# 棰勬湡杈撳嚭 replaced 2锛坒at 浜岃繘鍒朵袱涓?slice 鍚勪竴澶勶級
 ```
 
-**这个 ID 必须和第 3.2 节补丁里的字符串一字不差。**
+**杩欎釜 ID 蹇呴』鍜岀 3.2 鑺傝ˉ涓侀噷鐨勫瓧绗︿覆涓€瀛椾笉宸€?*
 
-### 4.3 拿配对手表 UDID
+### 4.3 鎷块厤瀵规墜琛?UDID
 
-方法 A（最简单）：iPhone → Watch App → 我的手表 → 通用 → 关于 → 看 UDID？手表 UDID 不在那里显示。用 B。
-
-方法 B：通过 companion_proxy 读配对表。跑 `watch_device.py`（第 6 部分附录代码）：
+鏂规硶 A锛堟渶绠€鍗曪級锛歩Phone 鈫?Watch App 鈫?鎴戠殑鎵嬭〃 鈫?閫氱敤 鈫?鍏充簬 鈫?鐪?UDID锛熸墜琛?UDID 涓嶅湪閭ｉ噷鏄剧ず銆傜敤 B銆?
+鏂规硶 B锛氶€氳繃 companion_proxy 璇婚厤瀵硅〃銆傝窇 `watch_device.py`锛堢 6 閮ㄥ垎闄勫綍浠ｇ爜锛夛細
 
 ```bash
-cd <watch-device-helper目录>
+cd <watch-device-helper鐩綍>
 USBMUXD_SOCKET_ADDRESS=172.27.128.1:27015 \
   ~/Developer/xtool-watch-device-venv/bin/python3 \
   watch_device.py --state-directory ~/xtool-tmp/watch-device-state \
   --device-info ~/xtool-tmp/watch-info.json
 ```
 
-首次会触发手表的"信任此电脑"提示，手表上点信任（戴在手上、解锁）。成功后 `watch-info.json` 里有 `udid` 和 `name`。记下 `<WATCH_UDID>`。
-
-**坑**：手表的信任记录存在 `--state-directory` 下；删掉或换目录要重新点信任。
-
-### 4.4 签名并装到 iPhone
+棣栨浼氳Е鍙戞墜琛ㄧ殑"淇′换姝ょ數鑴?鎻愮ず锛屾墜琛ㄤ笂鐐逛俊浠伙紙鎴村湪鎵嬩笂銆佽В閿侊級銆傛垚鍔熷悗 `watch-info.json` 閲屾湁 `udid` 鍜?`name`銆傝涓?`<WATCH_UDID>`銆?
+**鍧?*锛氭墜琛ㄧ殑淇′换璁板綍瀛樺湪 `--state-directory` 涓嬶紱鍒犳帀鎴栨崲鐩綍瑕侀噸鏂扮偣淇′换銆?
+### 4.4 绛惧悕骞惰鍒?iPhone
 
 ```bash
 xtool-watch install ~/xtool-tmp/hermes-1.4.1-grouped.ipa \
@@ -317,298 +268,225 @@ xtool-watch install ~/xtool-tmp/hermes-1.4.1-grouped.ipa \
   --signed-ipa-output ~/xtool-tmp/hermes-signed.ipa
 ```
 
-预期：`Provisioning` 阶段 Apple 给你的团队创建 `<GROUP_ID>`（免费账号可以建组，实测）→ `Signing → Packaging → Installing → Verifying → Successfully installed!`
+棰勬湡锛歚Provisioning` 闃舵 Apple 缁欎綘鐨勫洟闃熷垱寤?`<GROUP_ID>`锛堝厤璐硅处鍙峰彲浠ュ缓缁勶紝瀹炴祴锛夆啋 `Signing 鈫?Packaging 鈫?Installing 鈫?Verifying 鈫?Successfully installed!`
 
-**装完必须验证两个断言**：
-
+**瑁呭畬蹇呴』楠岃瘉涓や釜鏂█**锛?
 ```python
 import zipfile, plistlib
 z = zipfile.ZipFile('hermes-signed.ipa')
 raw = z.read('Payload/HermesCompanion.app/Watch/HermesEnabler2.app/embedded.mobileprovision')
 p = plistlib.loads(raw[raw.find(b'<?xml'):raw.find(b'</plist>')+8])
-assert '<WATCH_UDID>' in p['ProvisionedDevices']          # 手表UDID在名单里
+assert '<WATCH_UDID>' in p['ProvisionedDevices']          # 鎵嬭〃UDID鍦ㄥ悕鍗曢噷
 assert p['Entitlements']['com.apple.security.application-groups'] == ['<GROUP_ID>']
 ```
 
-### 4.5 装到手表（绕过 iPhone Watch App！）
+### 4.5 瑁呭埌鎵嬭〃锛堢粫杩?iPhone Watch App锛侊級
 
-iPhone Watch App 的"可用 App → 安装"走异步同步，**大概率报"无法安装，请稍后再试"**。直接绕：
-
+iPhone Watch App 鐨?鍙敤 App 鈫?瀹夎"璧板紓姝ュ悓姝ワ紝**澶ф鐜囨姤"鏃犳硶瀹夎锛岃绋嶅悗鍐嶈瘯"**銆傜洿鎺ョ粫锛?
 ```bash
-# 从已签 IPA 解出手表 app
+# 浠庡凡绛?IPA 瑙ｅ嚭鎵嬭〃 app
 cd ~/xtool-tmp
 unzip -o -q hermes-signed.ipa 'Payload/HermesCompanion.app/Watch/HermesEnabler2.app/*' -d extract
 mv 'extract/Payload/HermesCompanion.app/Watch/HermesEnabler2.app' ./HermesEnabler2.app
 
-# 直连手表推送
-cd <watch-device-helper目录>
+# 鐩磋繛鎵嬭〃鎺ㄩ€?cd <watch-device-helper鐩綍>
 USBMUXD_SOCKET_ADDRESS=172.27.128.1:27015 \
   ~/Developer/xtool-watch-device-venv/bin/python3 \
   watch_device.py --state-directory ~/xtool-tmp/watch-device-state \
   --install ~/xtool-tmp/HermesEnabler2.app
 ```
 
-输出 `Install: 100%` + `Installed and verified` 即成功。**手表上直接打开 HermesEnabler**。
-
+杈撳嚭 `Install: 100%` + `Installed and verified` 鍗虫垚鍔熴€?*鎵嬭〃涓婄洿鎺ユ墦寮€ HermesEnabler**銆?
 ---
 
-## 第 4B 部分 · App Group 配置问题详解（为什么必须改二进制）
+## 绗?4B 閮ㄥ垎 路 App Group 閰嶇疆闂璇﹁В锛堜负浠€涔堝繀椤绘敼浜岃繘鍒讹級
 
-这块是整个流程最容易被误解的部分，单独说清楚。
+杩欏潡鏄暣涓祦绋嬫渶瀹规槗琚瑙ｇ殑閮ㄥ垎锛屽崟鐙娓呮銆?
+### 鐥囩姸
 
-### 症状
-
-手表上打开 HermesEnabler，bqtool 日志最后两行是：
-
+鎵嬭〃涓婃墦寮€ HermesEnabler锛宐qtool 鏃ュ織鏈€鍚庝袱琛屾槸锛?
 ```
 app group entitlement: (none)
 MobileGestalt Access Failed
 An App Group ID may be missing, or this watchOS version may be incompatible.
 ```
 
-原因：HermesEnabler 1.4+ 启动时用 `SecTaskCopyValueForEntitlement` 读 `com.apple.security.application-groups`，读不到（`(none)`）就走不下去。1.3 版本没这个检查，所以"1.3 能跑 1.4 报错"不奇怪。
-
-### 三个连环坑
-
-**坑 1：xtool 默认不给 Watch app 申请 App Group。**
-上游代码 `DeveloperServicesCapability.swift` 里 `AppGroupEntitlement` 硬编码 `isFree: false`，意味着免费账号签名时 App Group entitlement 会被过滤掉——描述文件里根本没有 `application-groups` 键。补丁 3.1 把它放开即可（实测免费账号可以注册 App Group，Apple 接口不拦）。
-
-**坑 2：组 ID `group.com.kamui.escape` 被原作者占用了。**
-App Group ID 在 Apple 开发者体系里**全局唯一**，先到先得。就算你放行了 App Group，去注册 `group.com.kamui.escape` 也会被拒：
-
+鍘熷洜锛欻ermesEnabler 1.4+ 鍚姩鏃剁敤 `SecTaskCopyValueForEntitlement` 璇?`com.apple.security.application-groups`锛岃涓嶅埌锛坄(none)`锛夊氨璧颁笉涓嬪幓銆?.3 鐗堟湰娌¤繖涓鏌ワ紝鎵€浠?1.3 鑳借窇 1.4 鎶ラ敊"涓嶅鎬€?
+### 涓変釜杩炵幆鍧?
+**鍧?1锛歺tool 榛樿涓嶇粰 Watch app 鐢宠 App Group銆?*
+涓婃父浠ｇ爜 `DeveloperServicesCapability.swift` 閲?`AppGroupEntitlement` 纭紪鐮?`isFree: false`锛屾剰鍛崇潃鍏嶈垂璐﹀彿绛惧悕鏃?App Group entitlement 浼氳杩囨护鎺夆€斺€旀弿杩版枃浠堕噷鏍规湰娌℃湁 `application-groups` 閿€傝ˉ涓?3.1 鎶婂畠鏀惧紑鍗冲彲锛堝疄娴嬪厤璐硅处鍙峰彲浠ユ敞鍐?App Group锛孉pple 鎺ュ彛涓嶆嫤锛夈€?
+**鍧?2锛氱粍 ID `group.com.kamui.escape` 琚師浣滆€呭崰鐢ㄤ簡銆?*
+App Group ID 鍦?Apple 寮€鍙戣€呬綋绯婚噷**鍏ㄥ眬鍞竴**锛屽厛鍒板厛寰椼€傚氨绠椾綘鏀捐浜?App Group锛屽幓娉ㄥ唽 `group.com.kamui.escape` 涔熶細琚嫆锛?
 ```
 Error(code: 35, reason: "An Application Group with Identifier
 'group.com.kamui.escape' is not available. Please enter a different string.")
 ```
 
-而 HermesEnabler 二进制把这个组 ID 硬编码在 `__TEXT,__cstring` 里，启动时就找它——**两边必须一致**。
-
-**坑 3：xtool 会"规范化"组 ID。**
-`ProvisioningIdentifiers.groupID(fromSanitized:)` 会把组 ID 改写成带 `XTL-<TeamID>` 前缀的形式， entitlement 里的值和二进制里的又对不上了。补丁 3.3 让它原样透传。
-
-### 解法的完整闭环
-
-1. 选一个 22 字节的自有组 ID（`group.` 开头，如 `group.com.friend.hermes`）——**长度必须与原串完全一致**，因为二进制 patch 是同长度覆盖；
-2. `patch-hermes-group.py` 把 IPA 里二进制两处 `group.com.kamui.escape` 改成你的 ID（fat 二进制两个 slice 各一处）；
-3. xtool 补丁 3.2 注入的 entitlement 用同一个 ID；
-4. 签名后 Apple 会在你团队下注册该组 ID 并把 `com.apple.security.application-groups: [<GROUP_ID>]` 写进 Watch app 的描述文件和二进制签名。
-
-验证（装完必做）：
-
+鑰?HermesEnabler 浜岃繘鍒舵妸杩欎釜缁?ID 纭紪鐮佸湪 `__TEXT,__cstring` 閲岋紝鍚姩鏃跺氨鎵惧畠鈥斺€?*涓よ竟蹇呴』涓€鑷?*銆?
+**鍧?3锛歺tool 浼?瑙勮寖鍖?缁?ID銆?*
+`ProvisioningIdentifiers.groupID(fromSanitized:)` 浼氭妸缁?ID 鏀瑰啓鎴愬甫 `XTL-<TeamID>` 鍓嶇紑鐨勫舰寮忥紝 entitlement 閲岀殑鍊煎拰浜岃繘鍒堕噷鐨勫張瀵逛笉涓婁簡銆傝ˉ涓?3.3 璁╁畠鍘熸牱閫忎紶銆?
+### 瑙ｆ硶鐨勫畬鏁撮棴鐜?
+1. 閫変竴涓?22 瀛楄妭鐨勮嚜鏈夌粍 ID锛坄group.` 寮€澶达紝濡?`group.com.friend.hermes`锛夆€斺€?*闀垮害蹇呴』涓庡師涓插畬鍏ㄤ竴鑷?*锛屽洜涓轰簩杩涘埗 patch 鏄悓闀垮害瑕嗙洊锛?2. `patch-hermes-group.py` 鎶?IPA 閲屼簩杩涘埗涓ゅ `group.com.kamui.escape` 鏀规垚浣犵殑 ID锛坒at 浜岃繘鍒朵袱涓?slice 鍚勪竴澶勶級锛?3. xtool 琛ヤ竵 3.2 娉ㄥ叆鐨?entitlement 鐢ㄥ悓涓€涓?ID锛?4. 绛惧悕鍚?Apple 浼氬湪浣犲洟闃熶笅娉ㄥ唽璇ョ粍 ID 骞舵妸 `com.apple.security.application-groups: [<GROUP_ID>]` 鍐欒繘 Watch app 鐨勬弿杩版枃浠跺拰浜岃繘鍒剁鍚嶃€?
+楠岃瘉锛堣瀹屽繀鍋氾級锛?
 ```python
 import zipfile, plistlib
 z = zipfile.ZipFile('hermes-signed.ipa')
 d = z.read('Payload/HermesCompanion.app/Watch/HermesEnabler2.app/HermesEnabler2')
-assert d.count(b'kamui') == 0                      # 旧组 ID 已清除
-assert d.count(b'<GROUP_ID>') >= 2                 # 新 ID 在二进制签名+字符串里
+assert d.count(b'kamui') == 0                      # 鏃х粍 ID 宸叉竻闄?assert d.count(b'<GROUP_ID>') >= 2                 # 鏂?ID 鍦ㄤ簩杩涘埗绛惧悕+瀛楃涓查噷
 raw = z.read('Payload/HermesCompanion.app/Watch/HermesEnabler2.app/embedded.mobileprovision')
 p = plistlib.loads(raw[raw.find(b'<?xml'):raw.find(b'</plist>')+8])
 assert p['Entitlements']['com.apple.security.application-groups'] == ['<GROUP_ID>']
 ```
 
-**如果组 ID 显示正常但 App 仍报 MobileGestalt**：那是 HermesEnabler 的 escape 路径在该 watchOS 版本上失效（上游 issue #7：watchOS 26.6.1 起全部策略失败），不是签名/App Group 问题——等作者更新适配。
-
+**濡傛灉缁?ID 鏄剧ず姝ｅ父浣?App 浠嶆姤 MobileGestalt**锛氶偅鏄?HermesEnabler 鐨?escape 璺緞鍦ㄨ watchOS 鐗堟湰涓婂け鏁堬紙涓婃父 issue #7锛歸atchOS 26.6.1 璧峰叏閮ㄧ瓥鐣ュけ璐ワ級锛屼笉鏄鍚?App Group 闂鈥斺€旂瓑浣滆€呮洿鏂伴€傞厤銆?
 ---
 
-## 第 4C 部分 · 手表侧"无法安装，请稍后再试"——成因与解法
+## 绗?4C 閮ㄥ垎 路 鎵嬭〃渚?鏃犳硶瀹夎锛岃绋嶅悗鍐嶈瘯"鈥斺€旀垚鍥犱笌瑙ｆ硶
 
-### 症状
+### 鐥囩姸
 
-`xtool-watch install` 输出 `Successfully installed!`，iPhone 上也能看到 HermesCompanion。但打开 iPhone 的 Watch App → 可用 App → HermesEnabler → 安装，转圈后提示：
+`xtool-watch install` 杈撳嚭 `Successfully installed!`锛宨Phone 涓婁篃鑳界湅鍒?HermesCompanion銆備絾鎵撳紑 iPhone 鐨?Watch App 鈫?鍙敤 App 鈫?HermesEnabler 鈫?瀹夎锛岃浆鍦堝悗鎻愮ず锛?
+> **鏃犳硶瀹夎" HermesEnabler"銆傝绋嶅悗鍐嶈瘯銆?*
 
-> **无法安装" HermesEnabler"。请稍后再试。**
+鍙嶅閲嶈瘯鏈夋椂鍋跺皵鎴愬姛锛堝伓鍙戞€э級锛屽鏁版儏鍐垫槸鏃犻檺澶辫触锛屼笖 iPhone 鍜屾墜琛ㄤ袱渚ч兘娌℃湁鍙鐨勯敊璇棩蹇椼€?
+### 鎴愬洜锛堝厛鐞嗚В锛屽埆鐬庨噸璇曪級
 
-反复重试有时偶尔成功（偶发性），多数情况是无限失败，且 iPhone 和手表两侧都没有可读的错误日志。
+iPhone 涓?瀹夎鎴愬姛"鍙唬琛?*澶栧３ app**锛圚ermesCompanion锛夎涓婁簡銆傚唴宓岀殑 Watch app锛坄Payload/.../Watch/HermesEnabler2.app`锛夋槸鍙︿竴鏉￠€氶亾锛歩Phone 鐨?NanoAppSync/watchd 鎶?app 寮傛鍚屾鍒版墜琛ㄢ€斺€旇繖鏉￠€氶亾瀵逛晶杞?app 鐨勬牎楠岄潪甯镐笉閫忔槑锛?
+- 鎵嬭〃澶勪簬浠讳綍**闃诲鐘舵€?*锛堟湭瑙ｉ攣銆佹湭浣╂埓銆佸紑鍙戣€呮ā寮忔湭纭銆侀厤瀵圭紦瀛樿繃鏈熴€佽摑鐗?Wi-Fi 閾捐矾鎶栧姩锛夐兘浼氱洿鎺ュ悙杩欎釜閫氱敤閿欒锛屾病鏈夌粏鑺傦紱
+- 鎻忚堪鏂囦欢鏍￠獙澶辫触锛堢己 Watch UDID銆乪ntitlement 涓嶅尮閰嶏級涔熸槸鍚屼竴鍙ヨ瘽锛?- 瀹冧笉鍖哄垎"鏆傛椂鎬уけ璐?鍜?纭畾鎬уけ璐?锛岄噸璇曞彧鏄湪璧岃繍姘斻€?
+### 瑙ｆ硶锛氱粫杩囪繖鏉￠€氶亾锛岀洿杩炴墜琛ㄦ帹
 
-### 成因（先理解，别瞎重试）
-
-iPhone 上"安装成功"只代表**外壳 app**（HermesCompanion）装上了。内嵌的 Watch app（`Payload/.../Watch/HermesEnabler2.app`）是另一条通道：iPhone 的 NanoAppSync/watchd 把 app 异步同步到手表——这条通道对侧载 app 的校验非常不透明：
-
-- 手表处于任何**阻塞状态**（未解锁、未佩戴、开发者模式未确认、配对缓存过期、蓝牙/Wi-Fi 链路抖动）都会直接吐这个通用错误，没有细节；
-- 描述文件校验失败（缺 Watch UDID、entitlement 不匹配）也是同一句话；
-- 它不区分"暂时性失败"和"确定性失败"，重试只是在赌运气。
-
-### 解法：绕过这条通道，直连手表推
-
-第 4.5 节给出的就是这个问题的标准答案——**不要依赖 iPhone Watch App 的同步**，通过 iPhone 的 companion_proxy 直接把手表 lockdown 端口 62078 转发出来，然后用 `streaming_zip_conduit` 把已签名的 `.app` 推给手表：
-
+绗?4.5 鑺傜粰鍑虹殑灏辨槸杩欎釜闂鐨勬爣鍑嗙瓟妗堚€斺€?*涓嶈渚濊禆 iPhone Watch App 鐨勫悓姝?*锛岄€氳繃 iPhone 鐨?companion_proxy 鐩存帴鎶婃墜琛?lockdown 绔彛 62078 杞彂鍑烘潵锛岀劧鍚庣敤 `streaming_zip_conduit` 鎶婂凡绛惧悕鐨?`.app` 鎺ㄧ粰鎵嬭〃锛?
 ```bash
-# 前置：iPhone 解锁亮屏；手表戴着且解锁；配对缓存还在（--state-directory 别删）
-cd ~/xtool-tmp
+# 鍓嶇疆锛歩Phone 瑙ｉ攣浜睆锛涙墜琛ㄦ埓鐫€涓旇В閿侊紱閰嶅缂撳瓨杩樺湪锛?-state-directory 鍒垹锛?cd ~/xtool-tmp
 unzip -o -q hermes-signed.ipa 'Payload/HermesCompanion.app/Watch/HermesEnabler2.app/*' -d extract
 mv 'extract/Payload/HermesCompanion.app/Watch/HermesEnabler2.app' ./HermesEnabler2.app
 
-cd <watch-device-helper目录>
+cd <watch-device-helper鐩綍>
 USBMUXD_SOCKET_ADDRESS=172.27.128.1:27015 \
   ~/Developer/xtool-watch-device-venv/bin/python3 \
   watch_device.py --state-directory ~/xtool-tmp/watch-device-state \
   --install ~/xtool-tmp/HermesEnabler2.app
 ```
 
-这条路径绕过了 NanoAppSync，直接对手表讲 lockdown 协议，**进度逐百分比可见、结果通过 installation_proxy Lookup 验证**——装没装上不再是黑盒。
-
-### 直连推送本身失败时的排查顺序
-
-1. `{"watch_connected": true, "developer_mode": true}`——必须两项都 true。`developer_mode: false` → 回 2.6 检查手表开关是否真打开且重启确认过；
-2. `The Watch must first trust this PC` → 加 `--pair` 重跑，戴表解锁在手表上点信任；
-3. `Cannot forward Watch lockdown service` / 连接超时 → iPhone 和手表的配对链路问题：手表重开蓝牙、放近手机、iPhone Watch App 里确认"我的手表"列表里设备在线；
-4. 安装到一半报 `AppInstallError`/`StreamingZipConduitError` → 大概率是签名/描述文件问题，回 4.4 跑那两个断言（Watch UDID 在 ProvisionedDevices、application-groups  entitlement 正确）；
-5. 一切正常但手表上打不开 → 回 4B 检查 App Group。
-
+杩欐潯璺緞缁曡繃浜?NanoAppSync锛岀洿鎺ュ鎵嬭〃璁?lockdown 鍗忚锛?*杩涘害閫愮櫨鍒嗘瘮鍙銆佺粨鏋滈€氳繃 installation_proxy Lookup 楠岃瘉**鈥斺€旇娌¤涓婁笉鍐嶆槸榛戠洅銆?
+### 鐩磋繛鎺ㄩ€佹湰韬け璐ユ椂鐨勬帓鏌ラ『搴?
+1. `{"watch_connected": true, "developer_mode": true}`鈥斺€斿繀椤讳袱椤归兘 true銆俙developer_mode: false` 鈫?鍥?2.6 妫€鏌ユ墜琛ㄥ紑鍏虫槸鍚︾湡鎵撳紑涓旈噸鍚‘璁よ繃锛?2. `The Watch must first trust this PC` 鈫?鍔?`--pair` 閲嶈窇锛屾埓琛ㄨВ閿佸湪鎵嬭〃涓婄偣淇′换锛?3. `Cannot forward Watch lockdown service` / 杩炴帴瓒呮椂 鈫?iPhone 鍜屾墜琛ㄧ殑閰嶅閾捐矾闂锛氭墜琛ㄩ噸寮€钃濈墮銆佹斁杩戞墜鏈恒€乮Phone Watch App 閲岀‘璁?鎴戠殑鎵嬭〃"鍒楄〃閲岃澶囧湪绾匡紱
+4. 瀹夎鍒颁竴鍗婃姤 `AppInstallError`/`StreamingZipConduitError` 鈫?澶ф鐜囨槸绛惧悕/鎻忚堪鏂囦欢闂锛屽洖 4.4 璺戦偅涓や釜鏂█锛圵atch UDID 鍦?ProvisionedDevices銆乤pplication-groups  entitlement 姝ｇ‘锛夛紱
+5. 涓€鍒囨甯镐絾鎵嬭〃涓婃墦涓嶅紑 鈫?鍥?4B 妫€鏌?App Group銆?
 ---
 
-## 第 4D 部分 · 免费账号 7 天过期与续签
+## 绗?4D 閮ㄥ垎 路 鍏嶈垂璐﹀彿 7 澶╄繃鏈熶笌缁
 
-### 会过期的到底是什么
+### 浼氳繃鏈熺殑鍒板簳鏄粈涔?
+鍏嶈垂锛圥ersonal Team锛夌鍚嶄骇鐢熶袱涓湁鏃舵晥鐨勪笢瑗匡細
 
-免费（Personal Team）签名产生两个有时效的东西：
-
-| 产物 | 有效期 | 到期表现 |
+| 浜х墿 | 鏈夋晥鏈?| 鍒版湡琛ㄧ幇 |
 |---|---|---|
-| 描述文件 `embedded.mobileprovision` | **7 天** | app 打不开，或手表上图标变灰点不动 |
-| 开发证书 | ~1 年 | 一般无感 |
+| 鎻忚堪鏂囦欢 `embedded.mobileprovision` | **7 澶?* | app 鎵撲笉寮€锛屾垨鎵嬭〃涓婂浘鏍囧彉鐏扮偣涓嶅姩 |
+| 寮€鍙戣瘉涔?| ~1 骞?| 涓€鑸棤鎰?|
 
-**App Group 注册本身不会过期**——`<GROUP_ID>` 一旦在你团队下创建就一直存在，续签时 Apple 直接复用，不需要（也不应该）再注册新的。
-
-### 续签操作（每次到期跑一遍，约 5 分钟）
-
-前置和首次一样：iPhone 解锁亮屏、手表戴着解锁、环境变量都在。然后只需两步：
-
+**App Group 娉ㄥ唽鏈韩涓嶄細杩囨湡**鈥斺€擿<GROUP_ID>` 涓€鏃﹀湪浣犲洟闃熶笅鍒涘缓灏变竴鐩村瓨鍦紝缁鏃?Apple 鐩存帴澶嶇敤锛屼笉闇€瑕侊紙涔熶笉搴旇锛夊啀娉ㄥ唽鏂扮殑銆?
+### 缁鎿嶄綔锛堟瘡娆″埌鏈熻窇涓€閬嶏紝绾?5 鍒嗛挓锛?
+鍓嶇疆鍜岄娆′竴鏍凤細iPhone 瑙ｉ攣浜睆銆佹墜琛ㄦ埓鐫€瑙ｉ攣銆佺幆澧冨彉閲忛兘鍦ㄣ€傜劧鍚庡彧闇€涓ゆ锛?
 ```bash
-# 1. 重新签名 + 装 iPhone（同一个 grouped IPA，不用再 patch）
-xtool-watch install ~/xtool-tmp/hermes-1.4.1-grouped.ipa \
+# 1. 閲嶆柊绛惧悕 + 瑁?iPhone锛堝悓涓€涓?grouped IPA锛屼笉鐢ㄥ啀 patch锛?xtool-watch install ~/xtool-tmp/hermes-1.4.1-grouped.ipa \
   --watch-udid <WATCH_UDID> \
   --signed-ipa-output ~/xtool-tmp/hermes-signed.ipa
-# 注意：输出文件已存在会先删掉，或者换个输出名
+# 娉ㄦ剰锛氳緭鍑烘枃浠跺凡瀛樺湪浼氬厛鍒犳帀锛屾垨鑰呮崲涓緭鍑哄悕
 
-# 2. 重新直推手表（fresh-signed 的 .app）
-cd ~/xtool-tmp
+# 2. 閲嶆柊鐩存帹鎵嬭〃锛坒resh-signed 鐨?.app锛?cd ~/xtool-tmp
 unzip -o -q hermes-signed.ipa 'Payload/HermesCompanion.app/Watch/HermesEnabler2.app/*' -d extract2
 mv 'extract2/Payload/HermesCompanion.app/Watch/HermesEnabler2.app' ./HermesEnabler2.app
 
-cd <watch-device-helper目录>
+cd <watch-device-helper鐩綍>
 USBMUXD_SOCKET_ADDRESS=172.27.128.1:27015 \
   ~/Developer/xtool-watch-device-venv/bin/python3 \
   watch_device.py --state-directory ~/xtool-tmp/watch-device-state \
   --install ~/xtool-tmp/HermesEnabler2.app
 ```
 
-### 不需要重做的事
+### 涓嶉渶瑕侀噸鍋氱殑浜?
+- 鉂?涓嶇敤閲嶆柊 patch 浜岃繘鍒讹紙`hermes-1.4.1-grouped.ipa` 鐣欑潃澶嶇敤锛?- 鉂?涓嶇敤閲嶆柊娉ㄥ唽 App Group锛堝洟闃熶笅鐨勭粍 ID 姘镐箙鏈夋晥锛?- 鉂?涓嶇敤閲嶆柊 `xtool-watch auth`锛堥櫎闈炵櫥鍑烘垨鎹㈣处鍙凤級
+- 鉂?涓嶇敤閲嶆柊鐐规墜琛ㄤ俊浠伙紙`--state-directory` 閲岀殑閰嶅缂撳瓨杩樺湪锛?- 鉂?涓嶇敤閲嶅紑寮€鍙戣€呮ā寮忥紙寮€鍏崇姸鎬佹槸璁惧绾х殑锛?
+### 寤鸿锛氭妸缁鍋氭垚鑴氭湰
 
-- ❌ 不用重新 patch 二进制（`hermes-1.4.1-grouped.ipa` 留着复用）
-- ❌ 不用重新注册 App Group（团队下的组 ID 永久有效）
-- ❌ 不用重新 `xtool-watch auth`（除非登出或换账号）
-- ❌ 不用重新点手表信任（`--state-directory` 里的配对缓存还在）
-- ❌ 不用重开开发者模式（开关状态是设备级的）
-
-### 建议：把续签做成脚本
-
-把上面两条命令写成一个 `renew.sh` 放 PATH 里，每周跑一次。也可以在日历设个 6 天后的提醒（留一天余量，避免哪天忘了导致 app 罢工）。
-
+鎶婁笂闈袱鏉″懡浠ゅ啓鎴愪竴涓?`renew.sh` 鏀?PATH 閲岋紝姣忓懆璺戜竴娆°€備篃鍙互鍦ㄦ棩鍘嗚涓?6 澶╁悗鐨勬彁閱掞紙鐣欎竴澶╀綑閲忥紝閬垮厤鍝ぉ蹇樹簡瀵艰嚧 app 缃㈠伐锛夈€?
 ---
 
-## 第 4E 部分 · 环境与账号层的其余坑（容易被忽略）
+## 绗?4E 閮ㄥ垎 路 鐜涓庤处鍙峰眰鐨勫叾浣欏潙锛堝鏄撹蹇界暐锛?
+### iPhone 鐨勫紑鍙戣€呮ā寮忎篃鏄殣钘忕殑
 
-### iPhone 的开发者模式也是隐藏的
+鍜屾墜琛ㄤ竴鏍凤紝iPhone 鐨?寮€鍙戣€呮ā寮?寮€鍏抽粯璁ょ湅涓嶅埌鈥斺€旇澶囩涓€娆¤寮€鍙戝伐鍏疯繛杩囧悗鎵嶅嚭鐜般€傛湰娴佺▼閲?*绗竴娆¤窇 `xtool-watch install` 閫氬父浼氳嚜鍔ㄨЕ鍙?reveal**锛氳瀹屼竴娆″悗 iPhone 璁剧疆閲屾墠鍑虹幇寮€鍏炽€傛墍浠ユ纭『搴忔槸锛?
+1. 鍏堣窇涓€娆?`xtool-watch install`锛堟垨浠讳綍 pymobiledevice3 杩炴帴锛夎Е鍙?reveal锛?2. iPhone 璁剧疆 鈫?闅愮涓庡畨鍏ㄦ€?鈫?寮€鍙戣€呮ā寮忓嚭鐜?鈫?鎵撳紑 鈫?閲嶅惎 鈫?纭锛?3. 涔嬪悗鍐嶈窇瀹夎鎵嶆槸寮€鍙戣€呮ā寮忕敓鏁堢殑鐘舵€併€?
+濡傛灉 `xtool-watch install` 鎶?"Developer Mode disabled" 浣嗚缃噷鏍规湰鎵句笉鍒板紑鍏斥€斺€斿氨鏄繕娌¤ reveal銆?
+### WSL 缃戝叧 IP 浼氬彉
 
-和手表一样，iPhone 的"开发者模式"开关默认看不到——设备第一次被开发工具连过后才出现。本流程里**第一次跑 `xtool-watch install` 通常会自动触发 reveal**：装完一次后 iPhone 设置里才出现开关。所以正确顺序是：
-
-1. 先跑一次 `xtool-watch install`（或任何 pymobiledevice3 连接）触发 reveal；
-2. iPhone 设置 → 隐私与安全性 → 开发者模式出现 → 打开 → 重启 → 确认；
-3. 之后再跑安装才是开发者模式生效的状态。
-
-如果 `xtool-watch install` 报 "Developer Mode disabled" 但设置里根本找不到开关——就是还没被 reveal。
-
-### WSL 网关 IP 会变
-
-`172.27.128.1` 是 WSL 虚拟交换机的 DHCP 地址，**重启 WSL 或 Windows 后可能变**。不要写死，每次用前查：
+`172.27.128.1` 鏄?WSL 铏氭嫙浜ゆ崲鏈虹殑 DHCP 鍦板潃锛?*閲嶅惎 WSL 鎴?Windows 鍚庡彲鑳藉彉**銆備笉瑕佸啓姝伙紝姣忔鐢ㄥ墠鏌ワ細
 
 ```bash
 GATEWAY=$(ip route show default | awk '{print $3}')
 export USBMUXD_SOCKET_ADDRESS=$GATEWAY:27015
-# 连通性验证
-timeout 3 bash -c "echo > /dev/tcp/$GATEWAY/27015" && echo ok || echo unreachable
+# 杩為€氭€ч獙璇?timeout 3 bash -c "echo > /dev/tcp/$GATEWAY/27015" && echo ok || echo unreachable
 ```
 
-`unreachable` → 检查 Windows 侧 `netstat -ano | findstr :27015` 是否还在监听；iPhone 拔掉重插。
+`unreachable` 鈫?妫€鏌?Windows 渚?`netstat -ano | findstr :27015` 鏄惁杩樺湪鐩戝惉锛沬Phone 鎷旀帀閲嶆彃銆?
+### Apple Devices 鍜?iTunes 鍙兘鐣欎竴涓?
+Windows 涓婅杩?iTunes 鍙堣 Apple Devices锛堟垨鍙嶈繃鏉ワ級锛屼袱涓?usbmuxd 瀹炵幇浼氭墦鏋讹細27015 绔彛琚崰浣?iPhone 鏃舵柇鏃惰繛銆?*鍙繚鐣欏叾涓竴涓?*锛屾帹鑽?Apple Devices锛圡icrosoft Store 鐗堬級銆傚鏋滆浜?iTunes 鍙堝嵏杞戒笉骞插噣锛宍AppleMobileDeviceService` 鍙兘娈嬬暀鏃х増椹卞姩鈥斺€旇澶囩鐞嗗櫒閲岀‘璁?`Apple Mobile Device USB Driver` 瀛樺湪涓旂増鏈尮閰嶃€?
+`localhostForwarding` 榛樿寮€锛屼絾濡傛灉鏈変汉鍦?`.wslconfig` 閲屽叧浜嗗畠锛學SL 杩炰笉閫氱綉鍏?27015 鈥斺€斿鐢ㄦ柟妗堟槸 Windows 渚?`netsh interface portproxy` 鎴栫洿鎺ユ崲 mirrored 缃戠粶妯″紡銆?
+### `xtool auth` 鐨?Apple 2FA
 
-### Apple Devices 和 iTunes 只能留一个
+`xtool-watch auth` 鐢?SRP 鐧诲綍 Apple ID銆傚紑浜嗗弻閲嶈璇佺殑璐﹀彿浼氳姹傝緭鍏?*璁惧涓婃敹鍒扮殑 6 浣嶉獙璇佺爜**鈥斺€攊Phone 涓婂脊"鍏佽"鍐嶅～鏁板瓧銆侫pple 浼氳瘽 token 鏈夋晥鏈熸湁闄愶紝闀挎椂闂翠笉鐢ㄥ悗 `xtool` 浼氳姹傞噸鏂?`auth`锛涢绻佸け璐ヤ篃鍙兘瑙﹀彂 Apple 椋庢帶涓存椂閿佸畾锛岄殧鍑犲皬鏃跺啀璇曘€?
+### 鍏嶈垂璐﹀彿鐨勯殣钘忛厤棰?
+- **App ID 姣忓懆涓婇檺 10 涓?*锛歺tool 姣忎釜 bundle 涓€涓?App ID锛岃澶氫釜涓嶅悓 app 寰堝揩鎵撴弧锛涙墦婊″悗杩欏懆瑁呬笉浜嗘柊 app锛堢画绛句笉鍙楀奖鍝嶏紝鍥犱负 App ID 宸插瓨鍦級銆?- **璁惧娉ㄥ唽**锛氫粯璐硅处鍙锋瘡骞?100 鍙颁笂闄愩€佹瘡骞撮噸缃紱鍏嶈垂璐﹀彿鍚屾牱璁℃暟锛岄绻佹崲鎵嬫満/鎵嬭〃鍙兘鎾為檺銆?- **璇佷功鏁伴噺**锛氬厤璐硅处鍙锋湁鏁堝紑鍙戣瘉涔﹂€氬父鍙 1-2 涓紝`xtool` 鍦ㄦ柊鏈哄櫒涓婂垱寤鸿瘉涔﹀彲鑳藉け璐モ€斺€斿湪鏃ф満鍣ㄤ笂鍚婇攢鍚庡啀寤恒€?
+### 鎵嬭〃鐨勭郴缁熺骇閲嶇疆
 
-Windows 上装过 iTunes 又装 Apple Devices（或反过来），两个 usbmuxd 实现会打架：27015 端口被占但 iPhone 时断时连。**只保留其中一个**，推荐 Apple Devices（Microsoft Store 版）。如果装了 iTunes 又卸载不干净，`AppleMobileDeviceService` 可能残留旧版驱动——设备管理器里确认 `Apple Mobile Device USB Driver` 存在且版本匹配。
+浠ヤ笅鎿嶄綔浼?*娓呯┖寮€鍙戣€呮ā寮忓拰/鎴栦俊浠昏褰?*锛屼箣鍚庤閲嶈蛋 2.6锛?
+- watchOS 澶х増鏈洿鏂帮紙閮ㄥ垎鎯呭喌寮€鍏充繚鐣欙紝浣嗕互瀹為檯涓哄噯锛岃瀹屽厛楠岃瘉 `developer_mode: true`锛?- 鍙栨秷閰嶅閲嶆柊閰嶅锛堝繀娓咃細淇′换 + 寮€鍙戣€呮ā寮?+ 宸茶鐨勪晶杞?app锛?- 鎵嬭〃杩樺師/鎶归櫎
 
-`localhostForwarding` 默认开，但如果有人在 `.wslconfig` 里关了它，WSL 连不通网关 27015 ——备用方案是 Windows 侧 `netsh interface portproxy` 或直接换 mirrored 网络模式。
+**watchOS 鐗堟湰鍏煎鎬?*锛欻ermesEnabler 澹版槑鏀寔鑼冨洿锛?.4.1 鏄?watchOS 27.0鈥?7.3b1锛夈€備笉鍦ㄨ繖涓寖鍥村唴鐨勭増鏈嵆浣胯涓婁簡锛宔scape 璺緞涔熶笉宸ヤ綔鈥斺€旇繖涓嶆槸绛惧悕闂銆?
+### 鎵嬭〃涓婃畫鐣欐棫绛惧悕鐨勫壇鏈?
+濡傛灉鎵嬭〃涓婅杩囧師浣滆€呯鍚?鍏朵粬璐﹀彿绛惧悕鐨?HermesEnabler锛堢浉鍚?bundle id锛夛紝鐩存帴鎺ㄤ綘绛剧殑鍓湰鍙兘鍐茬獊銆?*鍏堝湪鎵嬭〃涓婃寜浣忓浘鏍囧垹鎺夋棫鐗?*锛屽啀璺?4.5 鐨勭洿鎺ㄣ€?
+### 澶氭墜琛ㄩ厤瀵?
+`proxy.list()` 棰勬湡鎭板ソ 1 鍧楅厤瀵规墜琛紝澶氬潡浼氱洿鎺ユ姤閿欍€傛湁澶氬潡琛ㄧ殑璇濇敼 `watch_connection.py` 鐨?`registry[0]` 鎸?UDID 閫夋嫨銆?
+### 閰嶅缂撳瓨鍒斁 /mnt/c
 
-### `xtool auth` 的 Apple 2FA
+`--state-directory` 瀛樻墜琛ㄧ殑閰嶅瀵嗛挜銆傛斁鍦?`/mnt/c/...`锛圵indows 鐩橈級鏈夋潈闄?灞炰富鏄犲皠闂锛屾煇浜?pymobiledevice3 鐗堟湰浼氬啓澶辫触銆?*淇濇寔鍦?Linux 鏂囦欢绯荤粺鍐?*锛坄~/xtool-tmp/watch-device-state`锛夛紝鍒犳帀绛変簬娓呯┖淇′换瑕侀噸鏂伴厤瀵广€?
+### IPA 鍐呴儴璺緞浼氶殢鐗堟湰鍙樺寲
 
-`xtool-watch auth` 用 SRP 登录 Apple ID。开了双重认证的账号会要求输入**设备上收到的 6 位验证码**——iPhone 上弹"允许"再填数字。Apple 会话 token 有效期有限，长时间不用后 `xtool` 会要求重新 `auth`；频繁失败也可能触发 Apple 风控临时锁定，隔几小时再试。
-
-### 免费账号的隐藏配额
-
-- **App ID 每周上限 10 个**：xtool 每个 bundle 一个 App ID，装多个不同 app 很快打满；打满后这周装不了新 app（续签不受影响，因为 App ID 已存在）。
-- **设备注册**：付费账号每年 100 台上限、每年重置；免费账号同样计数，频繁换手机/手表可能撞限。
-- **证书数量**：免费账号有效开发证书通常只容 1-2 个，`xtool` 在新机器上创建证书可能失败——在旧机器上吊销后再建。
-
-### 手表的系统级重置
-
-以下操作会**清空开发者模式和/或信任记录**，之后要重走 2.6：
-
-- watchOS 大版本更新（部分情况开关保留，但以实际为准，装完先验证 `developer_mode: true`）
-- 取消配对重新配对（必清：信任 + 开发者模式 + 已装的侧载 app）
-- 手表还原/抹除
-
-**watchOS 版本兼容性**：HermesEnabler 声明支持范围（1.4.1 是 watchOS 27.0–27.3b1）。不在这个范围内的版本即使装上了，escape 路径也不工作——这不是签名问题。
-
-### 手表上残留旧签名的副本
-
-如果手表上装过原作者签名/其他账号签名的 HermesEnabler（相同 bundle id），直接推你签的副本可能冲突。**先在手表上按住图标删掉旧版**，再跑 4.5 的直推。
-
-### 多手表配对
-
-`proxy.list()` 预期恰好 1 块配对手表，多块会直接报错。有多块表的话改 `watch_connection.py` 的 `registry[0]` 按 UDID 选择。
-
-### 配对缓存别放 /mnt/c
-
-`--state-directory` 存手表的配对密钥。放在 `/mnt/c/...`（Windows 盘）有权限/属主映射问题，某些 pymobiledevice3 版本会写失败。**保持在 Linux 文件系统内**（`~/xtool-tmp/watch-device-state`），删掉等于清空信任要重新配对。
-
-### IPA 内部路径会随版本变化
-
-`unzip` 提取路径 `Payload/HermesCompanion.app/Watch/HermesEnabler2.app` 是 1.4.1 的结构。换版本先确认：
+`unzip` 鎻愬彇璺緞 `Payload/HermesCompanion.app/Watch/HermesEnabler2.app` 鏄?1.4.1 鐨勭粨鏋勩€傛崲鐗堟湰鍏堢‘璁わ細
 
 ```bash
 unzip -l hermes-signed.ipa | grep -E '\.app/Info.plist'
-# 找到实际路径再按它解
+# 鎵惧埌瀹為檯璺緞鍐嶆寜瀹冭В
 ```
 
-### 其他小坑
+### 鍏朵粬灏忓潙
 
-- `--signed-ipa-output` 文件已存在会直接报错，先 `rm` 或换名字；
-- 系统时钟偏差过大会导致签名校验失败——保持 WSL 和 Windows 时间同步；
-- `xtool-watch install` 需要设备在线握手，即使加了 `--sign-only` 类参数，手机断开会让命令挂死而不是报错（手机保持解锁亮屏）；
-- iPhone 更新 iOS 后第一次连接可能重新弹"信任"——重新点一次。
-
+- `--signed-ipa-output` 鏂囦欢宸插瓨鍦ㄤ細鐩存帴鎶ラ敊锛屽厛 `rm` 鎴栨崲鍚嶅瓧锛?- 绯荤粺鏃堕挓鍋忓樊杩囧ぇ浼氬鑷寸鍚嶆牎楠屽け璐モ€斺€斾繚鎸?WSL 鍜?Windows 鏃堕棿鍚屾锛?- `xtool-watch install` 闇€瑕佽澶囧湪绾挎彙鎵嬶紝鍗充娇鍔犱簡 `--sign-only` 绫诲弬鏁帮紝鎵嬫満鏂紑浼氳鍛戒护鎸傛鑰屼笉鏄姤閿欙紙鎵嬫満淇濇寔瑙ｉ攣浜睆锛夛紱
+- iPhone 鏇存柊 iOS 鍚庣涓€娆¤繛鎺ュ彲鑳介噸鏂板脊"淇′换"鈥斺€旈噸鏂扮偣涓€娆°€?
 ---
 
-## 第 5 部分 · 坑位速查
+## 绗?5 閮ㄥ垎 路 鍧戜綅閫熸煡
 
-| 现象 | 原因 | 解法 |
+| 鐜拌薄 | 鍘熷洜 | 瑙ｆ硶 |
 |---|---|---|
-| `Error 35 ... group.com.kamui.escape is not available` | 组 ID 被原作者占用 | 第 4.2 节换自有 ID（详见 4B） |
-| 运行报 `app group entitlement: (none)` | App Group entitlement 没进签名 | 4B：检查 3 个补丁都打了、组 ID 两端一致 |
-| `idevice_subscription_context_t` 编译错 | 少 `--build-system native` | 第 3.5 节 |
-| `No device found` / 设备时有时无 | iPhone 锁屏 | 解锁亮屏重来 |
-| 手表"无法安装请稍后再试" | iPhone Watch App 同步通道（NanoAppSync）对所有失败报同一句话 | 不要重试，用 4.5/4C 直连安装 |
-| 手表"无法验证其完整性" | 描述文件缺 Watch UDID 或 Watch app 无独立 profile | 检查 4.4 两个断言 |
-| 手表设置里找不到"开发者模式" | 开关默认隐藏 | 2.6 先跑 `--reveal-developer-mode` |
-| `--install` 报 Enable Developer Mode | 手表开发者模式没真正打开/没确认 | 手表设置里确认已开且重启后点过确认 |
-| 手表要求"信任此电脑" | 手表配对缓存是新的 | 戴表解锁，用 4.5 工具触发后点信任 |
-| 运行报 MobileGestalt 但组 ID 显示正常 | 该 watchOS 版本 escape 路径本身失效（上游 issue #7） | 非签名问题，等作者更新 |
-| `swift: command not found` | 新 shell 没 source PATH | `export PATH=/opt/swift-6.4.1/usr/bin:$PATH` |
-| 7 天后 app 打不开 | 免费账号描述文件过期（组 ID/信任/开发者模式都还在） | 只需 4D 两步续签，不用重头再来 |
+| `Error 35 ... group.com.kamui.escape is not available` | 缁?ID 琚師浣滆€呭崰鐢?| 绗?4.2 鑺傛崲鑷湁 ID锛堣瑙?4B锛?|
+| 杩愯鎶?`app group entitlement: (none)` | App Group entitlement 娌¤繘绛惧悕 | 4B锛氭鏌?3 涓ˉ涓侀兘鎵撲簡銆佺粍 ID 涓ょ涓€鑷?|
+| `idevice_subscription_context_t` 缂栬瘧閿?| 灏?`--build-system native` | 绗?3.5 鑺?|
+| `No device found` / 璁惧鏃舵湁鏃舵棤 | iPhone 閿佸睆 | 瑙ｉ攣浜睆閲嶆潵 |
+| 鎵嬭〃"鏃犳硶瀹夎璇风◢鍚庡啀璇? | iPhone Watch App 鍚屾閫氶亾锛圢anoAppSync锛夊鎵€鏈夊け璐ユ姤鍚屼竴鍙ヨ瘽 | 涓嶈閲嶈瘯锛岀敤 4.5/4C 鐩磋繛瀹夎 |
+| 鎵嬭〃"鏃犳硶楠岃瘉鍏跺畬鏁存€? | 鎻忚堪鏂囦欢缂?Watch UDID 鎴?Watch app 鏃犵嫭绔?profile | 妫€鏌?4.4 涓や釜鏂█ |
+| 鎵嬭〃璁剧疆閲屾壘涓嶅埌"寮€鍙戣€呮ā寮? | 寮€鍏抽粯璁ら殣钘?| 2.6 鍏堣窇 `--reveal-developer-mode` |
+| `--install` 鎶?Enable Developer Mode | 鎵嬭〃寮€鍙戣€呮ā寮忔病鐪熸鎵撳紑/娌＄‘璁?| 鎵嬭〃璁剧疆閲岀‘璁ゅ凡寮€涓旈噸鍚悗鐐硅繃纭 |
+| 鎵嬭〃瑕佹眰"淇′换姝ょ數鑴? | 鎵嬭〃閰嶅缂撳瓨鏄柊鐨?| 鎴磋〃瑙ｉ攣锛岀敤 4.5 宸ュ叿瑙﹀彂鍚庣偣淇′换 |
+| 杩愯鎶?MobileGestalt 浣嗙粍 ID 鏄剧ず姝ｅ父 | 璇?watchOS 鐗堟湰 escape 璺緞鏈韩澶辨晥锛堜笂娓?issue #7锛?| 闈炵鍚嶉棶棰橈紝绛変綔鑰呮洿鏂?|
+| `swift: command not found` | 鏂?shell 娌?source PATH | `export PATH=/opt/swift-6.4.1/usr/bin:$PATH` |
+| 7 澶╁悗 app 鎵撲笉寮€ | 鍏嶈垂璐﹀彿鎻忚堪鏂囦欢杩囨湡锛堢粍 ID/淇′换/寮€鍙戣€呮ā寮忛兘杩樺湪锛?| 鍙渶 4D 涓ゆ缁锛屼笉鐢ㄩ噸澶村啀鏉?|
 
 ---
 
-## 第 6 部分 · 附录：watch_device.py 依赖的两份文件
-
+## 绗?6 閮ㄥ垎 路 闄勫綍锛歸atch_device.py 渚濊禆鐨勪袱浠芥枃浠?
 ### `watch_connection.py`
 
 ```python
@@ -750,14 +628,12 @@ if __name__ == "__main__":
     run()
 ```
 
-两文件放同一目录，`watch_device.py` import `watch_connection`。
-
+涓ゆ枃浠舵斁鍚屼竴鐩綍锛宍watch_device.py` import `watch_connection`銆?
 ---
 
-## 一句话总结流程
+## 涓€鍙ヨ瘽鎬荤粨娴佺▼
 
-装 Apple Devices → 装 WSL+Swift+libimobiledevice → clone xtool 打 3 个补丁并构建 → `xtool-watch auth` 登录 → patch IPA 里的组 ID → `xtool-watch install` 装 iPhone → 用 `watch_device.py` 直连手表推送 .app → 手表打开。
-
+瑁?Apple Devices 鈫?瑁?WSL+Swift+libimobiledevice 鈫?clone xtool 鎵?3 涓ˉ涓佸苟鏋勫缓 鈫?`xtool-watch auth` 鐧诲綍 鈫?patch IPA 閲岀殑缁?ID 鈫?`xtool-watch install` 瑁?iPhone 鈫?鐢?`watch_device.py` 鐩磋繛鎵嬭〃鎺ㄩ€?.app 鈫?鎵嬭〃鎵撳紑銆?
 ---
 
-**作者**：小红书 [@champ](https://xhslink.cn/o/6M9yj7X0RCn) · 实测环境 watchOS 27.2 / iOS 27.0.1 / 免费 Apple ID
+**浣滆€?*锛氬皬绾功 [@champ](https://xhslink.cn/o/6M9yj7X0RCn) 路 瀹炴祴鐜 watchOS 27.2 / iOS 27.0.1 / 鍏嶈垂 Apple ID
