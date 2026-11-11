@@ -386,6 +386,53 @@ assert p['Entitlements']['com.apple.security.application-groups'] == ['<GROUP_ID
 
 ---
 
+## Part 4C · Watch-side "Unable to install, try again later" — cause and fix
+
+### Symptom
+
+`xtool-watch install` prints `Successfully installed!` and HermesCompanion shows up on the iPhone. But in the iOS Watch app → Available Apps → HermesEnabler → Install, after spinning:
+
+> **Unable to install "HermesEnabler". Please try again later.**
+
+Retrying occasionally works (it is intermittent), but usually fails forever — and neither side produces a readable error log.
+
+### Root cause (understand before retrying)
+
+"Installed" on the iPhone only means the **shell app** (HermesCompanion) landed. The embedded Watch app (`Payload/.../Watch/HermesEnabler2.app`) travels a different channel: iPhone's NanoAppSync/watchd syncs it to the watch asynchronously — an opaque path that fails for many distinct reasons, all collapsed into the same toast:
+
+- Any **blocking state on the watch** (locked, not worn, developer mode not confirmed, stale pairing cache, flaky Bluetooth/Wi-Fi) produces this generic error;
+- Profile validation failures (missing Watch UDID, mismatched entitlements) produce the same message;
+- It does not distinguish transient from permanent failure — retrying is a lottery.
+
+### Fix: bypass the channel, push directly to the watch
+
+Section 4.5 is the answer — **do not rely on the iOS Watch app sync**. Forward the watch's lockdown port 62078 through the iPhone's companion_proxy, then push the signed `.app` via `streaming_zip_conduit`:
+
+```bash
+# Prerequisites: iPhone unlocked & screen on; watch worn & unlocked; pairing cache intact
+cd ~/xtool-tmp
+unzip -o -q hermes-signed.ipa 'Payload/HermesCompanion.app/Watch/HermesEnabler2.app/*' -d extract
+mv 'extract/Payload/HermesCompanion.app/Watch/HermesEnabler2.app' ./HermesEnabler2.app
+
+cd <watch-device-helper dir>
+USBMUXD_SOCKET_ADDRESS=172.27.128.1:27015 \
+  ~/Developer/xtool-watch-device-venv/bin/python3 \
+  watch_device.py --state-directory ~/xtool-tmp/watch-device-state \
+  --install ~/xtool-tmp/HermesEnabler2.app
+```
+
+This path speaks lockdown to the watch directly, bypassing NanoAppSync — **progress prints per-percent and the result is verified via installation_proxy Lookup**. Success is no longer a black box.
+
+### If the direct push itself fails — debugging order
+
+1. `{"watch_connected": true, "developer_mode": true}` — both must be true. `developer_mode: false` → go back to 2.6, verify the toggle is on and the restart-confirm happened;
+2. `The Watch must first trust this PC` → rerun with `--pair`, wear & unlock the watch, accept trust on it;
+3. `Cannot forward Watch lockdown service` / timeouts → the iPhone↔watch pairing link: toggle watch Bluetooth, bring devices close, confirm the watch shows online in the iOS Watch app;
+4. Mid-install `AppInstallError`/`StreamingZipConduitError` → almost certainly a signature/profile issue — rerun the two 4.4 assertions (Watch UDID in ProvisionedDevices, correct application-groups entitlement);
+5. Installs fine but won't open on the watch → back to 4B for the App Group checks.
+
+---
+
 ## Part 5 · Troubleshooting table
 
 | Symptom | Cause | Fix |
@@ -394,7 +441,7 @@ assert p['Entitlements']['com.apple.security.application-groups'] == ['<GROUP_ID
 | Runtime `app group entitlement: (none)` | App Group entitlement missing from signature | 4B — all 3 patches applied, ID matches both sides |
 | `idevice_subscription_context_t` compile error | missing `--build-system native` | 3.5 |
 | `No device found` / device flickers | iPhone locked | unlock & retry |
-| Watch "Unable to install, try again later" | iOS Watch-app sync channel | 4.5 — direct install |
+| Watch "Unable to install, try again later" | iOS Watch-app sync (NanoAppSync) reports one generic error for everything | don't retry — direct install via 4.5/4C |
 | Watch "cannot verify its integrity" | profile lacks Watch UDID / no per-watch profile | re-check 4.4 assertions |
 | No "Developer Mode" toggle in Watch Settings | toggle hidden by default | 2.6 — run `--reveal-developer-mode` first |
 | `--install` says "Enable Developer Mode" | not actually enabled/confirmed on the watch | enable in Watch Settings, restart, confirm prompt |

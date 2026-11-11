@@ -408,6 +408,53 @@ assert p['Entitlements']['com.apple.security.application-groups'] == ['<GROUP_ID
 
 ---
 
+## 第 4C 部分 · 手表侧"无法安装，请稍后再试"——成因与解法
+
+### 症状
+
+`xtool-watch install` 输出 `Successfully installed!`，iPhone 上也能看到 HermesCompanion。但打开 iPhone 的 Watch App → 可用 App → HermesEnabler → 安装，转圈后提示：
+
+> **无法安装" HermesEnabler"。请稍后再试。**
+
+反复重试有时偶尔成功（偶发性），多数情况是无限失败，且 iPhone 和手表两侧都没有可读的错误日志。
+
+### 成因（先理解，别瞎重试）
+
+iPhone 上"安装成功"只代表**外壳 app**（HermesCompanion）装上了。内嵌的 Watch app（`Payload/.../Watch/HermesEnabler2.app`）是另一条通道：iPhone 的 NanoAppSync/watchd 把 app 异步同步到手表——这条通道对侧载 app 的校验非常不透明：
+
+- 手表处于任何**阻塞状态**（未解锁、未佩戴、开发者模式未确认、配对缓存过期、蓝牙/Wi-Fi 链路抖动）都会直接吐这个通用错误，没有细节；
+- 描述文件校验失败（缺 Watch UDID、entitlement 不匹配）也是同一句话；
+- 它不区分"暂时性失败"和"确定性失败"，重试只是在赌运气。
+
+### 解法：绕过这条通道，直连手表推
+
+第 4.5 节给出的就是这个问题的标准答案——**不要依赖 iPhone Watch App 的同步**，通过 iPhone 的 companion_proxy 直接把手表 lockdown 端口 62078 转发出来，然后用 `streaming_zip_conduit` 把已签名的 `.app` 推给手表：
+
+```bash
+# 前置：iPhone 解锁亮屏；手表戴着且解锁；配对缓存还在（--state-directory 别删）
+cd ~/xtool-tmp
+unzip -o -q hermes-signed.ipa 'Payload/HermesCompanion.app/Watch/HermesEnabler2.app/*' -d extract
+mv 'extract/Payload/HermesCompanion.app/Watch/HermesEnabler2.app' ./HermesEnabler2.app
+
+cd <watch-device-helper目录>
+USBMUXD_SOCKET_ADDRESS=172.27.128.1:27015 \
+  ~/Developer/xtool-watch-device-venv/bin/python3 \
+  watch_device.py --state-directory ~/xtool-tmp/watch-device-state \
+  --install ~/xtool-tmp/HermesEnabler2.app
+```
+
+这条路径绕过了 NanoAppSync，直接对手表讲 lockdown 协议，**进度逐百分比可见、结果通过 installation_proxy Lookup 验证**——装没装上不再是黑盒。
+
+### 直连推送本身失败时的排查顺序
+
+1. `{"watch_connected": true, "developer_mode": true}`——必须两项都 true。`developer_mode: false` → 回 2.6 检查手表开关是否真打开且重启确认过；
+2. `The Watch must first trust this PC` → 加 `--pair` 重跑，戴表解锁在手表上点信任；
+3. `Cannot forward Watch lockdown service` / 连接超时 → iPhone 和手表的配对链路问题：手表重开蓝牙、放近手机、iPhone Watch App 里确认"我的手表"列表里设备在线；
+4. 安装到一半报 `AppInstallError`/`StreamingZipConduitError` → 大概率是签名/描述文件问题，回 4.4 跑那两个断言（Watch UDID 在 ProvisionedDevices、application-groups  entitlement 正确）；
+5. 一切正常但手表上打不开 → 回 4B 检查 App Group。
+
+---
+
 ## 第 5 部分 · 坑位速查
 
 | 现象 | 原因 | 解法 |
@@ -416,7 +463,7 @@ assert p['Entitlements']['com.apple.security.application-groups'] == ['<GROUP_ID
 | 运行报 `app group entitlement: (none)` | App Group entitlement 没进签名 | 4B：检查 3 个补丁都打了、组 ID 两端一致 |
 | `idevice_subscription_context_t` 编译错 | 少 `--build-system native` | 第 3.5 节 |
 | `No device found` / 设备时有时无 | iPhone 锁屏 | 解锁亮屏重来 |
-| 手表"无法安装请稍后再试" | iPhone Watch App 同步通道问题 | 第 4.5 节直连安装 |
+| 手表"无法安装请稍后再试" | iPhone Watch App 同步通道（NanoAppSync）对所有失败报同一句话 | 不要重试，用 4.5/4C 直连安装 |
 | 手表"无法验证其完整性" | 描述文件缺 Watch UDID 或 Watch app 无独立 profile | 检查 4.4 两个断言 |
 | 手表设置里找不到"开发者模式" | 开关默认隐藏 | 2.6 先跑 `--reveal-developer-mode` |
 | `--install` 报 Enable Developer Mode | 手表开发者模式没真正打开/没确认 | 手表设置里确认已开且重启后点过确认 |
