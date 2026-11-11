@@ -328,11 +328,70 @@ USBMUXD_SOCKET_ADDRESS=172.27.128.1:27015 \
 
 ---
 
+## Part 4B · The App Group trap, explained in full
+
+This is the most misunderstood part of the pipeline, so it gets its own section.
+
+### Symptom
+
+Open HermesEnabler on the Watch; bqtool logs end with:
+
+```
+app group entitlement: (none)
+MobileGestalt Access Failed
+An App Group ID may be missing, or this watchOS version may be incompatible.
+```
+
+Why: HermesEnabler 1.4+ reads `com.apple.security.application-groups` at launch via `SecTaskCopyValueForEntitlement`. `(none)` = entitlement absent → abort. 1.3 had no such check, so "1.3 worked but 1.4 fails" is expected.
+
+### Three interlocking traps
+
+**Trap 1: xtool never requests App Groups for the Watch app.**
+Upstream `DeveloperServicesCapability.swift` hardcodes `AppGroupEntitlement` with `isFree: false`, so on free-team signing the App Group entitlement is filtered out — the profile literally has no `application-groups` key. Patch 3.1 opens it up (free teams CAN register app groups; Apple's API doesn't block it).
+
+**Trap 2: `group.com.kamui.escape` belongs to the original developer.**
+App Group IDs are **globally unique** in Apple's developer system — first come, first served. Even with App Groups enabled, registering `group.com.kamui.escape` is rejected:
+
+```
+Error(code: 35, reason: "An Application Group with Identifier
+'group.com.kamui.escape' is not available. Please enter a different string.")
+```
+
+Meanwhile the HermesEnabler binary hardcodes that group ID in `__TEXT,__cstring` — **both sides must match**.
+
+**Trap 3: xtool "normalizes" group IDs.**
+`ProvisioningIdentifiers.groupID(fromSanitized:)` rewrites the ID into an `XTL-<TeamID>`-prefixed form, so the entitlement value and the binary's embedded string diverge again. Patch 3.3 passes the ID through verbatim.
+
+### The complete fix loop
+
+1. Pick a 22-byte group ID of your own (`group.` prefix, e.g. `group.com.friend.hermes`) — **length must exactly equal the original string**, since the binary patch is a same-length overwrite;
+2. `patch-hermes-group.py` rewrites both `group.com.kamui.escape` occurrences inside the IPA binary (one per fat-binary slice);
+3. Patch 3.2 injects the entitlement with the same ID;
+4. On signing, Apple registers the group under your team and writes `com.apple.security.application-groups: [<GROUP_ID>]` into the Watch app's profile and binary signature.
+
+Verify (mandatory after install):
+
+```python
+import zipfile, plistlib
+z = zipfile.ZipFile('hermes-signed.ipa')
+d = z.read('Payload/HermesCompanion.app/Watch/HermesEnabler2.app/HermesEnabler2')
+assert d.count(b'kamui') == 0                      # old group ID gone
+assert d.count(b'<GROUP_ID>') >= 2                 # new ID in binary signature + strings
+raw = z.read('Payload/HermesCompanion.app/Watch/HermesEnabler2.app/embedded.mobileprovision')
+p = plistlib.loads(raw[raw.find(b'<?xml'):raw.find(b'</plist>')+8])
+assert p['Entitlements']['com.apple.security.application-groups'] == ['<GROUP_ID>']
+```
+
+**If the group ID shows correctly but the app still reports MobileGestalt failure**: the escape path itself is broken on that watchOS version (upstream issue #7: all strategies fail since watchOS 26.6.1) — that is not a signing/App Group problem; wait for an upstream fix.
+
+---
+
 ## Part 5 · Troubleshooting table
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| `Error 35 ... group.com.kamui.escape is not available` | Group ID owned by the original dev | 4.2 — use your own ID |
+| `Error 35 ... group.com.kamui.escape is not available` | Group ID owned by the original dev | 4.2 — use your own ID (see 4B) |
+| Runtime `app group entitlement: (none)` | App Group entitlement missing from signature | 4B — all 3 patches applied, ID matches both sides |
 | `idevice_subscription_context_t` compile error | missing `--build-system native` | 3.5 |
 | `No device found` / device flickers | iPhone locked | unlock & retry |
 | Watch "Unable to install, try again later" | iOS Watch-app sync channel | 4.5 — direct install |

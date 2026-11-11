@@ -350,11 +350,70 @@ USBMUXD_SOCKET_ADDRESS=172.27.128.1:27015 \
 
 ---
 
+## 第 4B 部分 · App Group 配置问题详解（为什么必须改二进制）
+
+这块是整个流程最容易被误解的部分，单独说清楚。
+
+### 症状
+
+手表上打开 HermesEnabler，bqtool 日志最后两行是：
+
+```
+app group entitlement: (none)
+MobileGestalt Access Failed
+An App Group ID may be missing, or this watchOS version may be incompatible.
+```
+
+原因：HermesEnabler 1.4+ 启动时用 `SecTaskCopyValueForEntitlement` 读 `com.apple.security.application-groups`，读不到（`(none)`）就走不下去。1.3 版本没这个检查，所以"1.3 能跑 1.4 报错"不奇怪。
+
+### 三个连环坑
+
+**坑 1：xtool 默认不给 Watch app 申请 App Group。**
+上游代码 `DeveloperServicesCapability.swift` 里 `AppGroupEntitlement` 硬编码 `isFree: false`，意味着免费账号签名时 App Group entitlement 会被过滤掉——描述文件里根本没有 `application-groups` 键。补丁 3.1 把它放开即可（实测免费账号可以注册 App Group，Apple 接口不拦）。
+
+**坑 2：组 ID `group.com.kamui.escape` 被原作者占用了。**
+App Group ID 在 Apple 开发者体系里**全局唯一**，先到先得。就算你放行了 App Group，去注册 `group.com.kamui.escape` 也会被拒：
+
+```
+Error(code: 35, reason: "An Application Group with Identifier
+'group.com.kamui.escape' is not available. Please enter a different string.")
+```
+
+而 HermesEnabler 二进制把这个组 ID 硬编码在 `__TEXT,__cstring` 里，启动时就找它——**两边必须一致**。
+
+**坑 3：xtool 会"规范化"组 ID。**
+`ProvisioningIdentifiers.groupID(fromSanitized:)` 会把组 ID 改写成带 `XTL-<TeamID>` 前缀的形式， entitlement 里的值和二进制里的又对不上了。补丁 3.3 让它原样透传。
+
+### 解法的完整闭环
+
+1. 选一个 22 字节的自有组 ID（`group.` 开头，如 `group.com.friend.hermes`）——**长度必须与原串完全一致**，因为二进制 patch 是同长度覆盖；
+2. `patch-hermes-group.py` 把 IPA 里二进制两处 `group.com.kamui.escape` 改成你的 ID（fat 二进制两个 slice 各一处）；
+3. xtool 补丁 3.2 注入的 entitlement 用同一个 ID；
+4. 签名后 Apple 会在你团队下注册该组 ID 并把 `com.apple.security.application-groups: [<GROUP_ID>]` 写进 Watch app 的描述文件和二进制签名。
+
+验证（装完必做）：
+
+```python
+import zipfile, plistlib
+z = zipfile.ZipFile('hermes-signed.ipa')
+d = z.read('Payload/HermesCompanion.app/Watch/HermesEnabler2.app/HermesEnabler2')
+assert d.count(b'kamui') == 0                      # 旧组 ID 已清除
+assert d.count(b'<GROUP_ID>') >= 2                 # 新 ID 在二进制签名+字符串里
+raw = z.read('Payload/HermesCompanion.app/Watch/HermesEnabler2.app/embedded.mobileprovision')
+p = plistlib.loads(raw[raw.find(b'<?xml'):raw.find(b'</plist>')+8])
+assert p['Entitlements']['com.apple.security.application-groups'] == ['<GROUP_ID>']
+```
+
+**如果组 ID 显示正常但 App 仍报 MobileGestalt**：那是 HermesEnabler 的 escape 路径在该 watchOS 版本上失效（上游 issue #7：watchOS 26.6.1 起全部策略失败），不是签名/App Group 问题——等作者更新适配。
+
+---
+
 ## 第 5 部分 · 坑位速查
 
 | 现象 | 原因 | 解法 |
 |---|---|---|
-| `Error 35 ... group.com.kamui.escape is not available` | 组 ID 被原作者占用 | 第 4.2 节换自有 ID |
+| `Error 35 ... group.com.kamui.escape is not available` | 组 ID 被原作者占用 | 第 4.2 节换自有 ID（详见 4B） |
+| 运行报 `app group entitlement: (none)` | App Group entitlement 没进签名 | 4B：检查 3 个补丁都打了、组 ID 两端一致 |
 | `idevice_subscription_context_t` 编译错 | 少 `--build-system native` | 第 3.5 节 |
 | `No device found` / 设备时有时无 | iPhone 锁屏 | 解锁亮屏重来 |
 | 手表"无法安装请稍后再试" | iPhone Watch App 同步通道问题 | 第 4.5 节直连安装 |
