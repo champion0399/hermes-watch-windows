@@ -505,6 +505,87 @@ USBMUXD_SOCKET_ADDRESS=172.27.128.1:27015 \
 
 ---
 
+## 第 4E 部分 · 环境与账号层的其余坑（容易被忽略）
+
+### iPhone 的开发者模式也是隐藏的
+
+和手表一样，iPhone 的"开发者模式"开关默认看不到——设备第一次被开发工具连过后才出现。本流程里**第一次跑 `xtool-watch install` 通常会自动触发 reveal**：装完一次后 iPhone 设置里才出现开关。所以正确顺序是：
+
+1. 先跑一次 `xtool-watch install`（或任何 pymobiledevice3 连接）触发 reveal；
+2. iPhone 设置 → 隐私与安全性 → 开发者模式出现 → 打开 → 重启 → 确认；
+3. 之后再跑安装才是开发者模式生效的状态。
+
+如果 `xtool-watch install` 报 "Developer Mode disabled" 但设置里根本找不到开关——就是还没被 reveal。
+
+### WSL 网关 IP 会变
+
+`172.27.128.1` 是 WSL 虚拟交换机的 DHCP 地址，**重启 WSL 或 Windows 后可能变**。不要写死，每次用前查：
+
+```bash
+GATEWAY=$(ip route show default | awk '{print $3}')
+export USBMUXD_SOCKET_ADDRESS=$GATEWAY:27015
+# 连通性验证
+timeout 3 bash -c "echo > /dev/tcp/$GATEWAY/27015" && echo ok || echo unreachable
+```
+
+`unreachable` → 检查 Windows 侧 `netstat -ano | findstr :27015` 是否还在监听；iPhone 拔掉重插。
+
+### Apple Devices 和 iTunes 只能留一个
+
+Windows 上装过 iTunes 又装 Apple Devices（或反过来），两个 usbmuxd 实现会打架：27015 端口被占但 iPhone 时断时连。**只保留其中一个**，推荐 Apple Devices（Microsoft Store 版）。如果装了 iTunes 又卸载不干净，`AppleMobileDeviceService` 可能残留旧版驱动——设备管理器里确认 `Apple Mobile Device USB Driver` 存在且版本匹配。
+
+`localhostForwarding` 默认开，但如果有人在 `.wslconfig` 里关了它，WSL 连不通网关 27015 ——备用方案是 Windows 侧 `netsh interface portproxy` 或直接换 mirrored 网络模式。
+
+### `xtool auth` 的 Apple 2FA
+
+`xtool-watch auth` 用 SRP 登录 Apple ID。开了双重认证的账号会要求输入**设备上收到的 6 位验证码**——iPhone 上弹"允许"再填数字。Apple 会话 token 有效期有限，长时间不用后 `xtool` 会要求重新 `auth`；频繁失败也可能触发 Apple 风控临时锁定，隔几小时再试。
+
+### 免费账号的隐藏配额
+
+- **App ID 每周上限 10 个**：xtool 每个 bundle 一个 App ID，装多个不同 app 很快打满；打满后这周装不了新 app（续签不受影响，因为 App ID 已存在）。
+- **设备注册**：付费账号每年 100 台上限、每年重置；免费账号同样计数，频繁换手机/手表可能撞限。
+- **证书数量**：免费账号有效开发证书通常只容 1-2 个，`xtool` 在新机器上创建证书可能失败——在旧机器上吊销后再建。
+
+### 手表的系统级重置
+
+以下操作会**清空开发者模式和/或信任记录**，之后要重走 2.6：
+
+- watchOS 大版本更新（部分情况开关保留，但以实际为准，装完先验证 `developer_mode: true`）
+- 取消配对重新配对（必清：信任 + 开发者模式 + 已装的侧载 app）
+- 手表还原/抹除
+
+**watchOS 版本兼容性**：HermesEnabler 声明支持范围（1.4.1 是 watchOS 27.0–27.3b1）。不在这个范围内的版本即使装上了，escape 路径也不工作——这不是签名问题。
+
+### 手表上残留旧签名的副本
+
+如果手表上装过原作者签名/其他账号签名的 HermesEnabler（相同 bundle id），直接推你签的副本可能冲突。**先在手表上按住图标删掉旧版**，再跑 4.5 的直推。
+
+### 多手表配对
+
+`proxy.list()` 预期恰好 1 块配对手表，多块会直接报错。有多块表的话改 `watch_connection.py` 的 `registry[0]` 按 UDID 选择。
+
+### 配对缓存别放 /mnt/c
+
+`--state-directory` 存手表的配对密钥。放在 `/mnt/c/...`（Windows 盘）有权限/属主映射问题，某些 pymobiledevice3 版本会写失败。**保持在 Linux 文件系统内**（`~/xtool-tmp/watch-device-state`），删掉等于清空信任要重新配对。
+
+### IPA 内部路径会随版本变化
+
+`unzip` 提取路径 `Payload/HermesCompanion.app/Watch/HermesEnabler2.app` 是 1.4.1 的结构。换版本先确认：
+
+```bash
+unzip -l hermes-signed.ipa | grep -E '\.app/Info.plist'
+# 找到实际路径再按它解
+```
+
+### 其他小坑
+
+- `--signed-ipa-output` 文件已存在会直接报错，先 `rm` 或换名字；
+- 系统时钟偏差过大会导致签名校验失败——保持 WSL 和 Windows 时间同步；
+- `xtool-watch install` 需要设备在线握手，即使加了 `--sign-only` 类参数，手机断开会让命令挂死而不是报错（手机保持解锁亮屏）；
+- iPhone 更新 iOS 后第一次连接可能重新弹"信任"——重新点一次。
+
+---
+
 ## 第 5 部分 · 坑位速查
 
 | 现象 | 原因 | 解法 |

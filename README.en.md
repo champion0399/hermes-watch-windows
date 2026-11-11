@@ -483,6 +483,86 @@ Wrap the two commands into a `renew.sh` on PATH and run it weekly. Set a calenda
 
 ---
 
+## Part 4E · Environment- and account-level traps (easy to miss)
+
+### The iPhone's Developer Mode is hidden too
+
+Like the watch, the iPhone's Developer Mode toggle is invisible until a development tool connects once. In this pipeline **the first `xtool-watch install` run usually triggers the reveal**: the toggle appears in Settings only after that first connection. Correct order:
+
+1. Run `xtool-watch install` once (or any pymobiledevice3 connection) to trigger the reveal;
+2. iPhone Settings → Privacy & Security → Developer Mode appears → on → restart → confirm;
+3. Subsequent installs run with Developer Mode actually in effect.
+
+If `xtool-watch install` reports "Developer Mode disabled" but no toggle exists in Settings — it simply hasn't been revealed yet.
+
+### The WSL gateway IP changes
+
+`172.27.128.1` is a DHCP address on the WSL virtual switch — **it can change after a WSL or Windows restart**. Don't hardcode it; resolve each session:
+
+```bash
+GATEWAY=$(ip route show default | awk '{print $3}')
+export USBMUXD_SOCKET_ADDRESS=$GATEWAY:27015
+timeout 3 bash -c "echo > /dev/tcp/$GATEWAY/27015" && echo ok || echo unreachable
+```
+
+`unreachable` → check `netstat -ano | findstr :27015` on Windows is still listening; replug the iPhone.
+
+### Apple Devices and iTunes conflict
+
+Having both iTunes and Apple Devices installed makes two usbmuxd implementations fight: port 27015 is occupied but the iPhone flickers in and out. **Keep only one** — prefer Apple Devices (Microsoft Store). A leftover `AppleMobileDeviceService` from a bad iTunes uninstall can hold an old driver; verify `Apple Mobile Device USB Driver` exists in Device Manager.
+
+WSL `localhostForwarding` is on by default, but if someone disabled it in `.wslconfig`, the gateway:27015 route dies — fall back to `netsh interface portproxy` on Windows or mirrored networking mode.
+
+### `xtool auth` and Apple 2FA
+
+`xtool-watch auth` logs in via SRP. Accounts with two-factor authentication ask for the **6-digit code pushed to a trusted device** — tap Allow on the iPhone, then enter the digits. Apple session tokens expire; `xtool` will demand re-auth after long idle. Rapid repeated failures can also trigger Apple's rate-limiting — wait a few hours and retry.
+
+### Hidden free-account quotas
+
+- **App ID weekly cap: 10** — xtool creates one App ID per bundle; installing several different apps exhausts the quota fast. Once hit, no new apps this week (renewals are unaffected — existing App IDs are reused).
+- **Device registration** — paid accounts get 100 devices/year; free accounts count too, and swapping phones/watches repeatedly can hit it.
+- **Certificate slots** — free teams typically hold only 1-2 valid development certificates; creating one on a new machine may fail — revoke the old machine's first.
+
+### Watch system-level resets
+
+These **wipe Developer Mode and/or the trust record** — afterwards redo 2.6:
+
+- watchOS major updates (the toggle sometimes survives; always verify `developer_mode: true` first)
+- Unpairing and re-pairing (always wipes: trust + developer mode + sideloaded apps)
+- Watch erase/restore
+
+**watchOS version compatibility**: HermesEnabler declares a supported range (1.4.1: watchOS 27.0–27.3b1). Outside that range the escape path fails even if the app installs — that is not a signing problem.
+
+### A stale differently-signed copy on the watch
+
+If the watch already runs HermesEnabler signed by someone else (same bundle id), pushing yours can conflict. **Long-press and delete the old copy on the watch first**, then run 4.5's direct push.
+
+### Multiple paired watches
+
+`proxy.list()` expects exactly one paired watch; more raises an error. With several watches, modify `watch_connection.py` to pick `registry[i]` by UDID.
+
+### Don't put the pairing cache on /mnt/c
+
+`--state-directory` stores the watch's pairing keys. On `/mnt/c/...` (Windows drive) some pymobiledevice3 versions hit permission/ownership-mapping failures. **Keep it on the Linux filesystem** (`~/xtool-tmp/watch-device-state`); deleting it means re-pairing.
+
+### IPA internal paths vary by version
+
+`Payload/HermesCompanion.app/Watch/HermesEnabler2.app` is the 1.4.1 layout. On other versions, check first:
+
+```bash
+unzip -l hermes-signed.ipa | grep -E '\.app/Info.plist'
+# find the real path, then extract by it
+```
+
+### Other small traps
+
+- `--signed-ipa-output` errors out if the file exists — `rm` it or pick a new name;
+- Clock skew between WSL and Windows can break signature validation — keep both synced;
+- `xtool-watch install` needs a live device handshake even for sign-only paths — a dropped phone hangs the command instead of erroring (keep the screen unlocked);
+- After an iOS update the iPhone may re-prompt "Trust" — tap it again.
+
+---
+
 ## Part 5 · Troubleshooting table
 
 | Symptom | Cause | Fix |
