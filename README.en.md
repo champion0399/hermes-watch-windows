@@ -601,3 +601,7 @@ watch-device-helper/
 ## One-line summary
 
 Install Apple Devices → set up WSL + Swift + libimobiledevice → clone xtool, apply 3 patches, build → `xtool-watch auth` → patch the group ID in the IPA → `xtool-watch install` to the iPhone → push the `.app` to the watch with `watch_device.py` → open on the watch.
+
+---
+
+**Author**: Xiaohongshu [@champ](https://xhslink.cn/o/6M9yj7X0RCn) · Verified on watchOS 27.2 / iOS 26.x / free Apple ID

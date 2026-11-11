@@ -757,3 +757,7 @@ if __name__ == "__main__":
 ## 一句话总结流程
 
 装 Apple Devices → 装 WSL+Swift+libimobiledevice → clone xtool 打 3 个补丁并构建 → `xtool-watch auth` 登录 → patch IPA 里的组 ID → `xtool-watch install` 装 iPhone → 用 `watch_device.py` 直连手表推送 .app → 手表打开。
+
+---
+
+**作者**：小红书 [@champ](https://xhslink.cn/o/6M9yj7X0RCn) · 实测环境 watchOS 27.2 / iOS 26.x / 免费 Apple ID
