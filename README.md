@@ -2,6 +2,8 @@
 
 **中文 | [English](README.en.md)**
 
+> **执行工具建议**：推荐用 **DeepSeek Harness**（dsh）跑本流程——整套工作流涉及二进制 patch、Apple 签名、设备直连等操作，Codex 等受严格安全协议约束的 agent 会在中途被拦截或要求逐步审批，打断流程。DeepSeek Harness 提供 unrestricted sandbox 模式，能顺畅跑完。
+>
 > **给 AI agent 的说明**：这是一份从头开始的完整操作手册，不要跳过任何"自检"步骤。
 > 所有路径里的 `champ`、`<DEPS_PREFIX>`、`<WATCH_UDID>`、`<PHONE_UDID>`、`<GROUP_ID>` 是占位符，按实际值替换。
 > 已验证环境：Windows 11 + WSL2 Ubuntu 24.04、Swift 6.4.1、libimobiledevice 1.4.0、iPhone（iOS 26.x）、Apple Watch（watchOS 27.2）、免费 Apple ID。
