@@ -17,7 +17,7 @@
 | Apple Watch | 已与 iPhone 配对，佩戴且解锁 | 手表能正常看表盘 |
 | Apple 账号 | **免费** Apple ID 即可，无需付费开发者 | 记住账号密码，后面 `xtool auth` 要用 |
 | iPhone 开发者模式 | 设置 → 隐私与安全性 → 开发者模式 → 开 | 开关在最底部，开了要重启一次手机 |
-| 手表开发者模式 | 手表 设置 → 隐私与安全性 → 开发者模式 → 开 | 同上 |
+| 手表开发者模式 | 手表 设置 → 隐私与安全性 → 开发者模式 → 开 | **开关默认隐藏**，需先做 2.6 的 reveal 步骤 |
 
 ---
 
@@ -142,6 +142,31 @@ python3 -m venv ~/Developer/xtool-watch-device-venv
 ```
 
 再把 `watch_connection.py` 和 `watch_device.py` 两个文件放到一个目录（本手册配套文件在 `work/watch-device-helper/`，内容见第 6 部分附录）。
+
+### 2.6 让手表显示"开发者模式"开关（关键前置，别跳过）
+
+**手表的"开发者模式"开关默认是隐藏的**——和 iPhone 一样，要先用一台"开发机器"连上去请求 reveal，开关才会出现在 手表 设置 → 隐私与安全性 里。macOS 上 Xcode 连一次就自动 reveal；没有 Mac 的话用 amfi lockdown 服务手动发 reveal 请求：
+
+```bash
+cd <watch-device-helper目录>
+USBMUXD_SOCKET_ADDRESS=172.27.128.1:27015 \
+  ~/Developer/xtool-watch-device-venv/bin/python3 \
+  watch_device.py --state-directory ~/xtool-tmp/watch-device-state \
+  --pair --reveal-developer-mode
+```
+
+执行流程：工具通过 iPhone 的 companion_proxy 直连手表 → 首次触发手表"信任此电脑"（戴表解锁点信任，配对记录存进 `--state-directory`）→ 向手表 amfi 服务发 `{"action": 0}` reveal 请求 → 打印提示。
+
+然后到手表上操作：**手表 设置 → 隐私与安全性 → 最底部现在出现"开发者模式"→ 打开 → 手表会要求重启 → 重启后在手表上确认一次"启用开发者模式"**。
+
+验证开关已生效：
+
+```bash
+watch_device.py --state-directory ~/xtool-tmp/watch-device-state
+# 输出应含 "developer_mode": true
+```
+
+若为 `false`，回到手表设置里确认开关真的开了且重启完成。
 
 ---
 
@@ -334,6 +359,8 @@ USBMUXD_SOCKET_ADDRESS=172.27.128.1:27015 \
 | `No device found` / 设备时有时无 | iPhone 锁屏 | 解锁亮屏重来 |
 | 手表"无法安装请稍后再试" | iPhone Watch App 同步通道问题 | 第 4.5 节直连安装 |
 | 手表"无法验证其完整性" | 描述文件缺 Watch UDID 或 Watch app 无独立 profile | 检查 4.4 两个断言 |
+| 手表设置里找不到"开发者模式" | 开关默认隐藏 | 2.6 先跑 `--reveal-developer-mode` |
+| `--install` 报 Enable Developer Mode | 手表开发者模式没真正打开/没确认 | 手表设置里确认已开且重启后点过确认 |
 | 手表要求"信任此电脑" | 手表配对缓存是新的 | 戴表解锁，用 4.5 工具触发后点信任 |
 | 运行报 MobileGestalt 但组 ID 显示正常 | 该 watchOS 版本 escape 路径本身失效（上游 issue #7） | 非签名问题，等作者更新 |
 | `swift: command not found` | 新 shell 没 source PATH | `export PATH=/opt/swift-6.4.1/usr/bin:$PATH` |

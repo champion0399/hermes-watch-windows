@@ -17,7 +17,7 @@
 | Apple Watch | Paired to the iPhone, worn & unlocked | Watch face reachable |
 | Apple account | **Free** Apple ID — no paid developer program | Needed later for `xtool auth` |
 | iPhone developer mode | Settings → Privacy & Security → Developer Mode → ON | Toggle at the very bottom; reboot required |
-| Watch developer mode | Watch → Settings → Privacy & Security → Developer Mode → ON | Same |
+| Watch developer mode | Watch → Settings → Privacy & Security → Developer Mode → ON | **Toggle is hidden by default** — must do the reveal step in 2.6 first |
 
 ---
 
@@ -140,6 +140,31 @@ python3 -m venv ~/Developer/xtool-watch-device-venv
 ```
 
 Put `watch_connection.py` and `watch_device.py` (full source in `watch-device-helper/` of this repo) into one directory.
+
+### 2.6 Reveal the hidden Developer Mode toggle on the Watch (do not skip)
+
+**The Watch's Developer Mode toggle is hidden by default** — like on iOS, a "developer machine" must connect and request a reveal before the switch appears under Watch → Settings → Privacy & Security. On macOS Xcode does this silently; without a Mac, send the reveal request via the watch's amfi lockdown service:
+
+```bash
+cd <watch-device-helper dir>
+USBMUXD_SOCKET_ADDRESS=172.27.128.1:27015 \
+  ~/Developer/xtool-watch-device-venv/bin/python3 \
+  watch_device.py --state-directory ~/xtool-tmp/watch-device-state \
+  --pair --reveal-developer-mode
+```
+
+Flow: the helper reaches the watch via the iPhone's companion_proxy → first run triggers "Trust This Computer" **on the Watch** (wear it, unlock, accept; pairing records are cached in `--state-directory`) → sends `{"action": 0}` to `com.apple.amfi.lockdown` → prints a confirmation.
+
+Then on the Watch itself: **Settings → Privacy & Security → the Developer Mode toggle now appears at the bottom → turn it on → the watch asks to restart → after reboot, confirm the "Developer Mode" prompt on the watch.**
+
+Verify it took effect:
+
+```bash
+watch_device.py --state-directory ~/xtool-tmp/watch-device-state
+# output should contain "developer_mode": true
+```
+
+If `false`, go back to Watch Settings and make sure the switch is on and the restart completed.
 
 ---
 
@@ -312,6 +337,8 @@ USBMUXD_SOCKET_ADDRESS=172.27.128.1:27015 \
 | `No device found` / device flickers | iPhone locked | unlock & retry |
 | Watch "Unable to install, try again later" | iOS Watch-app sync channel | 4.5 — direct install |
 | Watch "cannot verify its integrity" | profile lacks Watch UDID / no per-watch profile | re-check 4.4 assertions |
+| No "Developer Mode" toggle in Watch Settings | toggle hidden by default | 2.6 — run `--reveal-developer-mode` first |
+| `--install` says "Enable Developer Mode" | not actually enabled/confirmed on the watch | enable in Watch Settings, restart, confirm prompt |
 | Watch asks "Trust This Computer" | fresh pairing cache | wear & unlock watch, accept when the helper triggers it |
 | Runtime "MobileGestalt Access Failed" with correct group | escape path broken on this watchOS (upstream issue #7) | not a signing issue; wait for upstream fix |
 | `swift: command not found` | new shell without PATH | `export PATH=/opt/swift-6.4.1/usr/bin:$PATH` |
