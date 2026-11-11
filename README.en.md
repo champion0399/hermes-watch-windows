@@ -684,3 +684,17 @@ Install Apple Devices → set up WSL + Swift + libimobiledevice → clone xtool,
 ---
 
 **Author**: Xiaohongshu [@champ](https://xhslink.cn/o/6M9yj7X0RCn) · Verified on watchOS 27.2 / iOS 27.0.1 / free Apple ID
+
+---
+
+## Disclaimer
+
+This guide is for personal learning and device tinkering only. **All consequences of following it are your sole responsibility**, including but not limited to:
+
+- Device bricking, data loss, system damage, or voided warranty;
+- Apple account suspension, developer account restriction, or certificate revocation;
+- Watch-iPhone pairing failures, app crashes, or broken functionality;
+- Any liability arising from violations of Apple's Developer Program Agreement, App Store terms, or applicable laws;
+- Any direct, indirect, incidental, or consequential damages.
+
+Evaluate the risks yourself and ensure your actions comply with local law. The author makes no warranty of any kind and assumes no responsibility for the accuracy, completeness, timeliness, or fitness of this guide. By using it you acknowledge that you do so entirely at your own risk.
