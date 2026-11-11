@@ -1,35 +1,35 @@
-# Sideload HermesEnabler to Apple Watch — full guide (Windows + WSL + free Apple ID, no Mac)
+﻿# Sideload HermesEnabler to Apple Watch 鈥?full guide (Windows + WSL + free Apple ID, no Mac)
 
-**[中文](README.md) | English**
+**[涓枃](README.md) | English**
 
-> **Acknowledgments**: this guide only documents the sideloading method — all credit for the actual watch face bypass goes to [HermesEnabler](https://github.com/pookjw/HermesEnabler) and its original author **pookjw** (Jinwoo Kim). None of this would exist without his work.
+> **Acknowledgments**: this guide only documents the sideloading method 鈥?all credit for the actual watch face bypass goes to [HermesEnabler](https://github.com/pookjw/HermesEnabler) and its original author **pookjw** (Jinwoo Kim). None of this would exist without his work.
 >
-> **Tooling recommendation**: run this with **DeepSeek Harness** (dsh). The pipeline involves binary patching, Apple signing, and direct device access — agents under strict safety protocols like Codex get blocked mid-flow or demand step-by-step approvals. DeepSeek Harness runs an unrestricted sandbox mode that completes the job uninterrupted.
+> **Tooling recommendation**: run this with **DeepSeek Harness** (dsh). The pipeline involves binary patching, Apple signing, and direct device access 鈥?agents under strict safety protocols like Codex get blocked mid-flow or demand step-by-step approvals. DeepSeek Harness runs an unrestricted sandbox mode that completes the job uninterrupted.
 >
 > **Note for AI agents**: this is a from-scratch runbook. Do not skip the "verify" steps.
-> All placeholders — `champ`, `<DEPS_PREFIX>`, `<WATCH_UDID>`, `<PHONE_UDID>`, `<GROUP_ID>` — must be replaced with real values.
+> All placeholders 鈥?`champ`, `<DEPS_PREFIX>`, `<WATCH_UDID>`, `<PHONE_UDID>`, `<GROUP_ID>` 鈥?must be replaced with real values.
 > Verified on: Windows 11 + WSL2 Ubuntu 24.04, Swift 6.4.1, libimobiledevice 1.4.0, iPhone (iOS 27.0.1), Apple Watch (watchOS 27.2), free Apple ID.
 
 ---
 
-## Part 0 · Hardware & account prerequisites
+## Part 0 路 Hardware & account prerequisites
 
 | Item | Requirement | How to check |
 |---|---|---|
 | Computer | Windows 10/11 with WSL2 support | `wsl --status` |
 | iPhone | USB-connected, has tapped "Trust This Computer" | Trust prompt appears on plugin |
 | Apple Watch | Paired to the iPhone, worn & unlocked | Watch face reachable |
-| Apple account | **Free** Apple ID — no paid developer program | Needed later for `xtool auth` |
-| iPhone developer mode | Settings → Privacy & Security → Developer Mode → ON | Toggle at the very bottom; reboot required |
-| Watch developer mode | Watch → Settings → Privacy & Security → Developer Mode → ON | **Toggle is hidden by default** — must do the reveal step in 2.6 first |
+| Apple account | **Free** Apple ID 鈥?no paid developer program | Needed later for `xtool auth` |
+| iPhone developer mode | Settings 鈫?Privacy & Security 鈫?Developer Mode 鈫?ON | Toggle at the very bottom; reboot required |
+| Watch developer mode | Watch 鈫?Settings 鈫?Privacy & Security 鈫?Developer Mode 鈫?ON | **Toggle is hidden by default** 鈥?must do the reveal step in 2.6 first |
 
 ---
 
-## Part 1 · Windows-side software
+## Part 1 路 Windows-side software
 
 ### 1.1 Install Apple Devices (or iTunes)
 
-Purpose: provides `AppleMobileDeviceService`, which runs usbmuxd on `127.0.0.1:27015` — the bridge between WSL and the iPhone.
+Purpose: provides `AppleMobileDeviceService`, which runs usbmuxd on `127.0.0.1:27015` 鈥?the bridge between WSL and the iPhone.
 
 - Install **Apple Devices** from the Microsoft Store (or iTunes).
 - Plug in the iPhone, wait for Windows to recognize it, tap **Trust** on the iPhone.
@@ -53,11 +53,11 @@ WSL cannot reach Windows `127.0.0.1` directly; it goes through the gateway. Find
 ip route show default | awk '{print $3}'     # e.g. 172.27.128.1
 ```
 
-Throughout this guide `USBMUXD_SOCKET_ADDRESS=172.27.128.1:27015` — replace the IP with your gateway. WSL's relay maps `<gateway-ip>:27015` to `127.0.0.1:27015` on Windows, so WSL processes talk to usbmuxd through it.
+Throughout this guide `USBMUXD_SOCKET_ADDRESS=172.27.128.1:27015` 鈥?replace the IP with your gateway. WSL's relay maps `<gateway-ip>:27015` to `127.0.0.1:27015` on Windows, so WSL processes talk to usbmuxd through it.
 
 ---
 
-## Part 2 · WSL environment
+## Part 2 路 WSL environment
 
 ### 2.1 Base build tools
 
@@ -147,7 +147,7 @@ Put `watch_connection.py` and `watch_device.py` (full source in `watch-device-he
 
 ### 2.6 Reveal the hidden Developer Mode toggle on the Watch (do not skip)
 
-**The Watch's Developer Mode toggle is hidden by default** — like on iOS, a "developer machine" must connect and request a reveal before the switch appears under Watch → Settings → Privacy & Security. On macOS Xcode does this silently; without a Mac, send the reveal request via the watch's amfi lockdown service:
+**The Watch's Developer Mode toggle is hidden by default** 鈥?like on iOS, a "developer machine" must connect and request a reveal before the switch appears under Watch 鈫?Settings 鈫?Privacy & Security. On macOS Xcode does this silently; without a Mac, send the reveal request via the watch's amfi lockdown service:
 
 ```bash
 cd <watch-device-helper dir>
@@ -157,9 +157,9 @@ USBMUXD_SOCKET_ADDRESS=172.27.128.1:27015 \
   --pair --reveal-developer-mode
 ```
 
-Flow: the helper reaches the watch via the iPhone's companion_proxy → first run triggers "Trust This Computer" **on the Watch** (wear it, unlock, accept; pairing records are cached in `--state-directory`) → sends `{"action": 0}` to `com.apple.amfi.lockdown` → prints a confirmation.
+Flow: the helper reaches the watch via the iPhone's companion_proxy 鈫?first run triggers "Trust This Computer" **on the Watch** (wear it, unlock, accept; pairing records are cached in `--state-directory`) 鈫?sends `{"action": 0}` to `com.apple.amfi.lockdown` 鈫?prints a confirmation.
 
-Then on the Watch itself: **Settings → Privacy & Security → the Developer Mode toggle now appears at the bottom → turn it on → the watch asks to restart → after reboot, confirm the "Developer Mode" prompt on the watch.**
+Then on the Watch itself: **Settings 鈫?Privacy & Security 鈫?the Developer Mode toggle now appears at the bottom 鈫?turn it on 鈫?the watch asks to restart 鈫?after reboot, confirm the "Developer Mode" prompt on the watch.**
 
 Verify it took effect:
 
@@ -172,7 +172,7 @@ If `false`, go back to Watch Settings and make sure the switch is on and the res
 
 ---
 
-## Part 3 · xtool patches (3 sites)
+## Part 3 路 xtool patches (3 sites)
 
 ### 3.1 Allow App Groups on free teams
 
@@ -188,7 +188,7 @@ extension AppGroupEntitlement: EntitlementWithCapability {
 
 ### 3.2 Inject an App Group entitlement for the Watch bundle
 
-`Sources/XKit/DeveloperServices/App IDs/DeveloperServicesAddAppOperation.swift` — insert **before** `let appID = try await upsertApp(...)`:
+`Sources/XKit/DeveloperServices/App IDs/DeveloperServicesAddAppOperation.swift` 鈥?insert **before** `let appID = try await upsertApp(...)`:
 
 ```swift
 if isWatch,
@@ -204,7 +204,7 @@ if isWatch,
 
 ### 3.3 Keep the group ID verbatim
 
-`Sources/XKit/DeveloperServices/App Groups/DeveloperServicesAssignAppGroupsOperation.swift` — create the group with the ID untouched:
+`Sources/XKit/DeveloperServices/App Groups/DeveloperServicesAssignAppGroupsOperation.swift` 鈥?create the group with the ID untouched:
 
 ```swift
 let request = DeveloperServicesAddAppGroupRequest(
@@ -217,7 +217,7 @@ let request = DeveloperServicesAddAppGroupRequest(
 
 ### 3.4 Prerequisite: per-embedded-app provisioning
 
-`ProvisioningBundle.discover` must traverse `Watch/*.app` (marked `isWatch = true`), and every bundle must get its own App ID + profile. `DeveloperServicesFetchProfileOperation` must add the **Watch UDID** (not the iPhone UDID) to `ProvisionedDevices` when `isWatch`. If your base lacks per-bundle provisioning, implement it first — it is a hard requirement for the Watch to accept the app.
+`ProvisioningBundle.discover` must traverse `Watch/*.app` (marked `isWatch = true`), and every bundle must get its own App ID + profile. `DeveloperServicesFetchProfileOperation` must add the **Watch UDID** (not the iPhone UDID) to `ProvisionedDevices` when `isWatch`. If your base lacks per-bundle provisioning, implement it first 鈥?it is a hard requirement for the Watch to accept the app.
 
 ### 3.5 Build
 
@@ -254,7 +254,7 @@ xtool-watch auth status    # confirm the Team ID resolved
 
 ---
 
-## Part 4 · Prepare the HermesEnabler IPA
+## Part 4 路 Prepare the HermesEnabler IPA
 
 ### 4.1 Download
 
@@ -266,7 +266,7 @@ curl -L -o hermes-1.4.1.ipa https://github.com/pookjw/HermesEnabler/releases/dow
 
 ### 4.2 Rewire the App Group ID (critical)
 
-The binary hardcodes `group.com.kamui.escape` (the original developer's group — nobody else can register it; Apple replies Error 35 "not available"). Replace it with a unique **22-byte** ID from your own account, e.g. `group.com.friend.hermes` (22 chars). Use `patch-hermes-group.py` from this repo:
+The binary hardcodes `group.com.kamui.escape` (the original developer's group 鈥?nobody else can register it; Apple replies Error 35 "not available"). Replace it with a unique **22-byte** ID from your own account, e.g. `group.com.friend.hermes` (22 chars). Use `patch-hermes-group.py` from this repo:
 
 ```bash
 python3 patch-hermes-group.py hermes-1.4.1.ipa hermes-1.4.1-grouped.ipa 'group.com.<your-id>'
@@ -287,7 +287,7 @@ USBMUXD_SOCKET_ADDRESS=172.27.128.1:27015 \
   --device-info ~/xtool-tmp/watch-info.json
 ```
 
-The first run triggers a "Trust This Computer" prompt **on the Watch** — accept it while wearing the watch, unlocked. Afterwards `watch-info.json` contains `udid` — that is `<WATCH_UDID>`.
+The first run triggers a "Trust This Computer" prompt **on the Watch** 鈥?accept it while wearing the watch, unlocked. Afterwards `watch-info.json` contains `udid` 鈥?that is `<WATCH_UDID>`.
 
 **Gotcha**: the watch pairing cache lives under `--state-directory`; deleting it forces a re-trust.
 
@@ -299,7 +299,7 @@ xtool-watch install ~/xtool-tmp/hermes-1.4.1-grouped.ipa \
   --signed-ipa-output ~/xtool-tmp/hermes-signed.ipa
 ```
 
-Expected: `Provisioning` (Apple creates `<GROUP_ID>` under your free team — yes, free teams can create app groups) → `Signing → Packaging → Installing → Verifying → Successfully installed!`
+Expected: `Provisioning` (Apple creates `<GROUP_ID>` under your free team 鈥?yes, free teams can create app groups) 鈫?`Signing 鈫?Packaging 鈫?Installing 鈫?Verifying 鈫?Successfully installed!`
 
 **Verify two assertions right after install:**
 
@@ -314,7 +314,7 @@ assert p['Entitlements']['com.apple.security.application-groups'] == ['<GROUP_ID
 
 ### 4.5 Install to the Watch (bypass the iOS Watch app!)
 
-The iOS Watch app's "Available Apps → Install" uses an async sync channel that commonly fails with "Unable to install, try again later". Bypass it — push the signed `.app` straight to the watch's lockdown:
+The iOS Watch app's "Available Apps 鈫?Install" uses an async sync channel that commonly fails with "Unable to install, try again later". Bypass it 鈥?push the signed `.app` straight to the watch's lockdown:
 
 ```bash
 cd ~/xtool-tmp
@@ -332,7 +332,7 @@ USBMUXD_SOCKET_ADDRESS=172.27.128.1:27015 \
 
 ---
 
-## Part 4B · The App Group trap, explained in full
+## Part 4B 路 The App Group trap, explained in full
 
 This is the most misunderstood part of the pipeline, so it gets its own section.
 
@@ -346,29 +346,29 @@ MobileGestalt Access Failed
 An App Group ID may be missing, or this watchOS version may be incompatible.
 ```
 
-Why: HermesEnabler 1.4+ reads `com.apple.security.application-groups` at launch via `SecTaskCopyValueForEntitlement`. `(none)` = entitlement absent → abort. 1.3 had no such check, so "1.3 worked but 1.4 fails" is expected.
+Why: HermesEnabler 1.4+ reads `com.apple.security.application-groups` at launch via `SecTaskCopyValueForEntitlement`. `(none)` = entitlement absent 鈫?abort. 1.3 had no such check, so "1.3 worked but 1.4 fails" is expected.
 
 ### Three interlocking traps
 
 **Trap 1: xtool never requests App Groups for the Watch app.**
-Upstream `DeveloperServicesCapability.swift` hardcodes `AppGroupEntitlement` with `isFree: false`, so on free-team signing the App Group entitlement is filtered out — the profile literally has no `application-groups` key. Patch 3.1 opens it up (free teams CAN register app groups; Apple's API doesn't block it).
+Upstream `DeveloperServicesCapability.swift` hardcodes `AppGroupEntitlement` with `isFree: false`, so on free-team signing the App Group entitlement is filtered out 鈥?the profile literally has no `application-groups` key. Patch 3.1 opens it up (free teams CAN register app groups; Apple's API doesn't block it).
 
 **Trap 2: `group.com.kamui.escape` belongs to the original developer.**
-App Group IDs are **globally unique** in Apple's developer system — first come, first served. Even with App Groups enabled, registering `group.com.kamui.escape` is rejected:
+App Group IDs are **globally unique** in Apple's developer system 鈥?first come, first served. Even with App Groups enabled, registering `group.com.kamui.escape` is rejected:
 
 ```
 Error(code: 35, reason: "An Application Group with Identifier
 'group.com.kamui.escape' is not available. Please enter a different string.")
 ```
 
-Meanwhile the HermesEnabler binary hardcodes that group ID in `__TEXT,__cstring` — **both sides must match**.
+Meanwhile the HermesEnabler binary hardcodes that group ID in `__TEXT,__cstring` 鈥?**both sides must match**.
 
 **Trap 3: xtool "normalizes" group IDs.**
 `ProvisioningIdentifiers.groupID(fromSanitized:)` rewrites the ID into an `XTL-<TeamID>`-prefixed form, so the entitlement value and the binary's embedded string diverge again. Patch 3.3 passes the ID through verbatim.
 
 ### The complete fix loop
 
-1. Pick a 22-byte group ID of your own (`group.` prefix, e.g. `group.com.friend.hermes`) — **length must exactly equal the original string**, since the binary patch is a same-length overwrite;
+1. Pick a 22-byte group ID of your own (`group.` prefix, e.g. `group.com.friend.hermes`) 鈥?**length must exactly equal the original string**, since the binary patch is a same-length overwrite;
 2. `patch-hermes-group.py` rewrites both `group.com.kamui.escape` occurrences inside the IPA binary (one per fat-binary slice);
 3. Patch 3.2 injects the entitlement with the same ID;
 4. On signing, Apple registers the group under your team and writes `com.apple.security.application-groups: [<GROUP_ID>]` into the Watch app's profile and binary signature.
@@ -386,31 +386,31 @@ p = plistlib.loads(raw[raw.find(b'<?xml'):raw.find(b'</plist>')+8])
 assert p['Entitlements']['com.apple.security.application-groups'] == ['<GROUP_ID>']
 ```
 
-**If the group ID shows correctly but the app still reports MobileGestalt failure**: the escape path itself is broken on that watchOS version (upstream issue #7: all strategies fail since watchOS 26.6.1) — that is not a signing/App Group problem; wait for an upstream fix.
+**If the group ID shows correctly but the app still reports MobileGestalt failure**: the escape path itself is broken on that watchOS version (upstream issue #7: all strategies fail since watchOS 26.6.1) 鈥?that is not a signing/App Group problem; wait for an upstream fix.
 
 ---
 
-## Part 4C · Watch-side "Unable to install, try again later" — cause and fix
+## Part 4C 路 Watch-side "Unable to install, try again later" 鈥?cause and fix
 
 ### Symptom
 
-`xtool-watch install` prints `Successfully installed!` and HermesCompanion shows up on the iPhone. But in the iOS Watch app → Available Apps → HermesEnabler → Install, after spinning:
+`xtool-watch install` prints `Successfully installed!` and HermesCompanion shows up on the iPhone. But in the iOS Watch app 鈫?Available Apps 鈫?HermesEnabler 鈫?Install, after spinning:
 
 > **Unable to install "HermesEnabler". Please try again later.**
 
-Retrying occasionally works (it is intermittent), but usually fails forever — and neither side produces a readable error log.
+Retrying occasionally works (it is intermittent), but usually fails forever 鈥?and neither side produces a readable error log.
 
 ### Root cause (understand before retrying)
 
-"Installed" on the iPhone only means the **shell app** (HermesCompanion) landed. The embedded Watch app (`Payload/.../Watch/HermesEnabler2.app`) travels a different channel: iPhone's NanoAppSync/watchd syncs it to the watch asynchronously — an opaque path that fails for many distinct reasons, all collapsed into the same toast:
+"Installed" on the iPhone only means the **shell app** (HermesCompanion) landed. The embedded Watch app (`Payload/.../Watch/HermesEnabler2.app`) travels a different channel: iPhone's NanoAppSync/watchd syncs it to the watch asynchronously 鈥?an opaque path that fails for many distinct reasons, all collapsed into the same toast:
 
 - Any **blocking state on the watch** (locked, not worn, developer mode not confirmed, stale pairing cache, flaky Bluetooth/Wi-Fi) produces this generic error;
 - Profile validation failures (missing Watch UDID, mismatched entitlements) produce the same message;
-- It does not distinguish transient from permanent failure — retrying is a lottery.
+- It does not distinguish transient from permanent failure 鈥?retrying is a lottery.
 
 ### Fix: bypass the channel, push directly to the watch
 
-Section 4.5 is the answer — **do not rely on the iOS Watch app sync**. Forward the watch's lockdown port 62078 through the iPhone's companion_proxy, then push the signed `.app` via `streaming_zip_conduit`:
+Section 4.5 is the answer 鈥?**do not rely on the iOS Watch app sync**. Forward the watch's lockdown port 62078 through the iPhone's companion_proxy, then push the signed `.app` via `streaming_zip_conduit`:
 
 ```bash
 # Prerequisites: iPhone unlocked & screen on; watch worn & unlocked; pairing cache intact
@@ -425,19 +425,19 @@ USBMUXD_SOCKET_ADDRESS=172.27.128.1:27015 \
   --install ~/xtool-tmp/HermesEnabler2.app
 ```
 
-This path speaks lockdown to the watch directly, bypassing NanoAppSync — **progress prints per-percent and the result is verified via installation_proxy Lookup**. Success is no longer a black box.
+This path speaks lockdown to the watch directly, bypassing NanoAppSync 鈥?**progress prints per-percent and the result is verified via installation_proxy Lookup**. Success is no longer a black box.
 
-### If the direct push itself fails — debugging order
+### If the direct push itself fails 鈥?debugging order
 
-1. `{"watch_connected": true, "developer_mode": true}` — both must be true. `developer_mode: false` → go back to 2.6, verify the toggle is on and the restart-confirm happened;
-2. `The Watch must first trust this PC` → rerun with `--pair`, wear & unlock the watch, accept trust on it;
-3. `Cannot forward Watch lockdown service` / timeouts → the iPhone↔watch pairing link: toggle watch Bluetooth, bring devices close, confirm the watch shows online in the iOS Watch app;
-4. Mid-install `AppInstallError`/`StreamingZipConduitError` → almost certainly a signature/profile issue — rerun the two 4.4 assertions (Watch UDID in ProvisionedDevices, correct application-groups entitlement);
-5. Installs fine but won't open on the watch → back to 4B for the App Group checks.
+1. `{"watch_connected": true, "developer_mode": true}` 鈥?both must be true. `developer_mode: false` 鈫?go back to 2.6, verify the toggle is on and the restart-confirm happened;
+2. `The Watch must first trust this PC` 鈫?rerun with `--pair`, wear & unlock the watch, accept trust on it;
+3. `Cannot forward Watch lockdown service` / timeouts 鈫?the iPhone鈫攚atch pairing link: toggle watch Bluetooth, bring devices close, confirm the watch shows online in the iOS Watch app;
+4. Mid-install `AppInstallError`/`StreamingZipConduitError` 鈫?almost certainly a signature/profile issue 鈥?rerun the two 4.4 assertions (Watch UDID in ProvisionedDevices, correct application-groups entitlement);
+5. Installs fine but won't open on the watch 鈫?back to 4B for the App Group checks.
 
 ---
 
-## Part 4D · Free-account 7-day expiry and renewal
+## Part 4D 路 Free-account 7-day expiry and renewal
 
 ### What actually expires
 
@@ -448,7 +448,7 @@ Free (Personal Team) signing produces two time-bombed artifacts:
 | `embedded.mobileprovision` | **7 days** | app won't open, or the watch icon greys out |
 | Development certificate | ~1 year | usually invisible |
 
-**The App Group registration does not expire** — `<GROUP_ID>` persists under your team forever once created. Renewal reuses it; never re-register a new one.
+**The App Group registration does not expire** 鈥?`<GROUP_ID>` persists under your team forever once created. Renewal reuses it; never re-register a new one.
 
 ### Renewal (run once per expiry, ~5 min)
 
@@ -475,11 +475,11 @@ USBMUXD_SOCKET_ADDRESS=172.27.128.1:27015 \
 
 ### What you do NOT need to redo
 
-- ❌ Re-patch the binary (`hermes-1.4.1-grouped.ipa` is reusable)
-- ❌ Re-register the App Group (team groups persist forever)
-- ❌ Re-run `xtool-watch auth` (unless you logged out / changed accounts)
-- ❌ Re-trust the watch (pairing cache still lives in `--state-directory`)
-- ❌ Re-enable Developer Mode (device-level setting)
+- 鉂?Re-patch the binary (`hermes-1.4.1-grouped.ipa` is reusable)
+- 鉂?Re-register the App Group (team groups persist forever)
+- 鉂?Re-run `xtool-watch auth` (unless you logged out / changed accounts)
+- 鉂?Re-trust the watch (pairing cache still lives in `--state-directory`)
+- 鉂?Re-enable Developer Mode (device-level setting)
 
 ### Suggestion: script it
 
@@ -487,21 +487,21 @@ Wrap the two commands into a `renew.sh` on PATH and run it weekly. Set a calenda
 
 ---
 
-## Part 4E · Environment- and account-level traps (easy to miss)
+## Part 4E 路 Environment- and account-level traps (easy to miss)
 
 ### The iPhone's Developer Mode is hidden too
 
 Like the watch, the iPhone's Developer Mode toggle is invisible until a development tool connects once. In this pipeline **the first `xtool-watch install` run usually triggers the reveal**: the toggle appears in Settings only after that first connection. Correct order:
 
 1. Run `xtool-watch install` once (or any pymobiledevice3 connection) to trigger the reveal;
-2. iPhone Settings → Privacy & Security → Developer Mode appears → on → restart → confirm;
+2. iPhone Settings 鈫?Privacy & Security 鈫?Developer Mode appears 鈫?on 鈫?restart 鈫?confirm;
 3. Subsequent installs run with Developer Mode actually in effect.
 
-If `xtool-watch install` reports "Developer Mode disabled" but no toggle exists in Settings — it simply hasn't been revealed yet.
+If `xtool-watch install` reports "Developer Mode disabled" but no toggle exists in Settings 鈥?it simply hasn't been revealed yet.
 
 ### The WSL gateway IP changes
 
-`172.27.128.1` is a DHCP address on the WSL virtual switch — **it can change after a WSL or Windows restart**. Don't hardcode it; resolve each session:
+`172.27.128.1` is a DHCP address on the WSL virtual switch 鈥?**it can change after a WSL or Windows restart**. Don't hardcode it; resolve each session:
 
 ```bash
 GATEWAY=$(ip route show default | awk '{print $3}')
@@ -509,33 +509,33 @@ export USBMUXD_SOCKET_ADDRESS=$GATEWAY:27015
 timeout 3 bash -c "echo > /dev/tcp/$GATEWAY/27015" && echo ok || echo unreachable
 ```
 
-`unreachable` → check `netstat -ano | findstr :27015` on Windows is still listening; replug the iPhone.
+`unreachable` 鈫?check `netstat -ano | findstr :27015` on Windows is still listening; replug the iPhone.
 
 ### Apple Devices and iTunes conflict
 
-Having both iTunes and Apple Devices installed makes two usbmuxd implementations fight: port 27015 is occupied but the iPhone flickers in and out. **Keep only one** — prefer Apple Devices (Microsoft Store). A leftover `AppleMobileDeviceService` from a bad iTunes uninstall can hold an old driver; verify `Apple Mobile Device USB Driver` exists in Device Manager.
+Having both iTunes and Apple Devices installed makes two usbmuxd implementations fight: port 27015 is occupied but the iPhone flickers in and out. **Keep only one** 鈥?prefer Apple Devices (Microsoft Store). A leftover `AppleMobileDeviceService` from a bad iTunes uninstall can hold an old driver; verify `Apple Mobile Device USB Driver` exists in Device Manager.
 
-WSL `localhostForwarding` is on by default, but if someone disabled it in `.wslconfig`, the gateway:27015 route dies — fall back to `netsh interface portproxy` on Windows or mirrored networking mode.
+WSL `localhostForwarding` is on by default, but if someone disabled it in `.wslconfig`, the gateway:27015 route dies 鈥?fall back to `netsh interface portproxy` on Windows or mirrored networking mode.
 
 ### `xtool auth` and Apple 2FA
 
-`xtool-watch auth` logs in via SRP. Accounts with two-factor authentication ask for the **6-digit code pushed to a trusted device** — tap Allow on the iPhone, then enter the digits. Apple session tokens expire; `xtool` will demand re-auth after long idle. Rapid repeated failures can also trigger Apple's rate-limiting — wait a few hours and retry.
+`xtool-watch auth` logs in via SRP. Accounts with two-factor authentication ask for the **6-digit code pushed to a trusted device** 鈥?tap Allow on the iPhone, then enter the digits. Apple session tokens expire; `xtool` will demand re-auth after long idle. Rapid repeated failures can also trigger Apple's rate-limiting 鈥?wait a few hours and retry.
 
 ### Hidden free-account quotas
 
-- **App ID weekly cap: 10** — xtool creates one App ID per bundle; installing several different apps exhausts the quota fast. Once hit, no new apps this week (renewals are unaffected — existing App IDs are reused).
-- **Device registration** — paid accounts get 100 devices/year; free accounts count too, and swapping phones/watches repeatedly can hit it.
-- **Certificate slots** — free teams typically hold only 1-2 valid development certificates; creating one on a new machine may fail — revoke the old machine's first.
+- **App ID weekly cap: 10** 鈥?xtool creates one App ID per bundle; installing several different apps exhausts the quota fast. Once hit, no new apps this week (renewals are unaffected 鈥?existing App IDs are reused).
+- **Device registration** 鈥?paid accounts get 100 devices/year; free accounts count too, and swapping phones/watches repeatedly can hit it.
+- **Certificate slots** 鈥?free teams typically hold only 1-2 valid development certificates; creating one on a new machine may fail 鈥?revoke the old machine's first.
 
 ### Watch system-level resets
 
-These **wipe Developer Mode and/or the trust record** — afterwards redo 2.6:
+These **wipe Developer Mode and/or the trust record** 鈥?afterwards redo 2.6:
 
 - watchOS major updates (the toggle sometimes survives; always verify `developer_mode: true` first)
 - Unpairing and re-pairing (always wipes: trust + developer mode + sideloaded apps)
 - Watch erase/restore
 
-**watchOS version compatibility**: HermesEnabler declares a supported range (1.4.1: watchOS 27.0–27.3b1). Outside that range the escape path fails even if the app installs — that is not a signing problem.
+**watchOS version compatibility**: HermesEnabler declares a supported range (1.4.1: watchOS 27.0鈥?7.3b1). Outside that range the escape path fails even if the app installs 鈥?that is not a signing problem.
 
 ### A stale differently-signed copy on the watch
 
@@ -560,24 +560,101 @@ unzip -l hermes-signed.ipa | grep -E '\.app/Info.plist'
 
 ### Other small traps
 
-- `--signed-ipa-output` errors out if the file exists — `rm` it or pick a new name;
-- Clock skew between WSL and Windows can break signature validation — keep both synced;
-- `xtool-watch install` needs a live device handshake even for sign-only paths — a dropped phone hangs the command instead of erroring (keep the screen unlocked);
-- After an iOS update the iPhone may re-prompt "Trust" — tap it again.
+- `--signed-ipa-output` errors out if the file exists 鈥?`rm` it or pick a new name;
+- Clock skew between WSL and Windows can break signature validation 鈥?keep both synced;
+- `xtool-watch install` needs a live device handshake even for sign-only paths 鈥?a dropped phone hangs the command instead of erroring (keep the screen unlocked);
+- After an iOS update the iPhone may re-prompt "Trust" 鈥?tap it again.
 
 ---
 
-## Part 5 · Troubleshooting table
+## Part 5 路 Full feature & settings reference (1.4.1, from source)
+
+The author never documented the settings 鈥?every entry below is extracted from `HermesEnabler2/` Swift/ObjC source. Every toggle ultimately writes a capability flag in the MobileGestalt (MG) cache.
+
+### Watch Faces
+
+| Toggle | MG key | Effect | Note |
+|---|---|---|---|
+| Herm猫s | `DeviceBrand` + `fuKL2rMywRgQF1wowOA/cg` | Spoofs brand as Herm猫s Edition 鈫?unlocks Herm猫s faces | Core; restart Carousel to apply |
+| Ultra Faces | `main-screen-class` + `fdh+s6j3VijuyrK7xLjd7g` | Spoofs screen class as Ultra 鈫?unlocks Ultra faces | 鈿狅笍 Conflicts: enabling Ultra disables Herm猫s Faubourg Party |
+
+### Display
+
+| Toggle | MG key | Effect |
+|---|---|---|
+| Always-On Display | `2OOJf1VhaM7NxfRok3HbWQ` + `j8/Omm6s1lsmTDFsXjsBfA` | Declares AOD support |
+| AOD 1 Hz | `aoJSd/MXk7M40NgXTM6x+g` | 1Hz always-on refresh (S9+) |
+| AOD Vibrancy | `ykpu7qyhqFweVMKtxNylWA` | Vivid AOD (S9+) |
+| Periodic ALS Updates | `Leuy56dCZmAMYoVCQGTfPA` | Periodic ambient light updates |
+| Resolution override | `g7YQ1Djxh4YiKlEeaoGhzg` + `OjzOua0LkOegX7pQdgMksw` | Spoofs reported screen size, 6 presets | 鈿狅笍 Risky: wrong value = oversized/clipped UI (issue #28), needs restart, reversible |
+
+### Controls
+
+| Toggle | MG key | Effect |
+|---|---|---|
+| Action Button | `FBw/2WrPE2supEKosxxoTw` | Declares Ultra action button |
+| Double Tap | `l1CWke97nbaAcWDqA6T5LA` | Double-tap gesture (S9+) |
+| On-Screen Keyboard | `MQJ1mlVrhOwaUUVJehJSVA` | On-screen keyboard (S7+) |
+| Raise Wrist to Wake | `nmOy2K5HzAAs2QNAi8wR+Q` | Raise-to-wake |
+| Raise to Speak | `4D8XW4YwJI7QvyPhv1TEdw` | Raise-to-Siri (S3+) |
+| Siri Listening Capability | `U+73bmG4kBGj6kpreQXUTQ` | "Hey Siri" always listening |
+
+### Sensors & Workouts
+
+| Toggle | MG key | Real hardware it maps to |
+|---|---|---|
+| Depth Sensor | `Ijs+pw5tRyxqSy5kfgZNuQ` | Ultra depth gauge |
+| Absolute Altimeter | `PFnuFyqMMnGUQQnTqS5byg` | Absolute altimeter (S8+/Ultra) |
+| Always-On Compass | `aCQx2Qq/TChnNAq1rr6Egw` | Always-on compass (SE2+) |
+| Compass Orienteering | `GPIs61LYNpcwZqwlFr7bbg` | Orienteering (Ultra Waypoints) |
+| Continuous Heart Rate | `W2RPjaqovtsgiRB6ScePGA` | Continuous HR |
+| Noise Exposure | `SaW+DA+cbiqDHrex8MTABA` | Noise monitoring (S4+) |
+| Battery Information | `Kao6GNYdAy5hwXblxeGYJQ` | Battery health |
+| Swimming Workouts | `cRjPy4Ef+KZwJ+nfPeBV5Q` | Swimming workouts |
+
+鈿狅笍 The whole group is "capability declaration" only 鈥?**it does not create sensors that don't exist**. No depth gauge on your watch means Depth Sensor gives you nothing.
+
+### Siri & Intelligence
+
+| Option | MG key | Effect |
+|---|---|---|
+| Region Code | `h63QSdBCiT/z0WU6rdQv6Q` | Device region: US/HK/JP/CN/TW/UK/CA |
+| Sales Region | `zHeENZu+wbg7PUprwNwBWg` + `yK+xavymRGZ3xWc1tb8XDg` | Sales suffix (LL/A, ZA/A, 鈥? |
+| Apple Intelligence / Siri AI | `A62OafQ85EJAiiqKn4agtg` | Declares Apple Intelligence (paired iPhone must support too) |
+| On-Device Siri | `K/R1GfGfCkXvEhaPS2Vrng` | On-device Siri |
+| Audio Intelligence | `rb2tKZxlj0Gm2tBmUQSLqQ` | Audio intelligence (Series 12 / Ultra 4 only) |
+
+### Backups (MG Backups)
+
+- **First launch mandatory**: an "initial backup" is created before any change, protected from overwrite
+- **Three tiers**: `initial` 鈫?`auto-*` (auto before every write) 鈫?`manual-*`
+- **Restore validation**: compares `CacheUUID` and `CacheData` length; mismatched backups are rejected (prevents flashing another watch's/OS's backup)
+
+### Hidden mechanics (in source, not in UI)
+
+- **BQEscape 鈥?6 strategies**: class13-direct / class13-traversal / class7-symlink / class2-stage / class2-subpath / class2-parent; only when all 6 fail does it report MobileGestalt Access Failed
+- **Class-2 fallback** (experimental): escape path for the no-App-Group case; unreliable on 27.2
+- **NeoSpring**: injects a hidden WKWebView to restart Carousel after face changes 鈥?no full reboot needed
+- **bqtool.log**: escape trace written to Documents/bqtool.log
+- **MGOffsets / MGDefaults plists**: one offset table + CacheUUID per supported build; builds not in the table are refused (the source of "unsupported version")
+
+### Key limits
+
+1. Only `RecoveryVerified` builds in MGOffsets can be written; 2. flags 鈮?hardware; 3. Herm猫s and Ultra are mutually exclusive; 4. backups bind to a build 鈥?a watchOS update may invalidate them; 5. the iPhone companion app is a shell 鈥?all features live on the watch.
+
+---
+
+## Part 6 路 Troubleshooting table
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| `Error 35 ... group.com.kamui.escape is not available` | Group ID owned by the original dev | 4.2 — use your own ID (see 4B) |
-| Runtime `app group entitlement: (none)` | App Group entitlement missing from signature | 4B — all 3 patches applied, ID matches both sides |
+| `Error 35 ... group.com.kamui.escape is not available` | Group ID owned by the original dev | 4.2 鈥?use your own ID (see 4B) |
+| Runtime `app group entitlement: (none)` | App Group entitlement missing from signature | 4B 鈥?all 3 patches applied, ID matches both sides |
 | `idevice_subscription_context_t` compile error | missing `--build-system native` | 3.5 |
 | `No device found` / device flickers | iPhone locked | unlock & retry |
-| Watch "Unable to install, try again later" | iOS Watch-app sync (NanoAppSync) reports one generic error for everything | don't retry — direct install via 4.5/4C |
+| Watch "Unable to install, try again later" | iOS Watch-app sync (NanoAppSync) reports one generic error for everything | don't retry 鈥?direct install via 4.5/4C |
 | Watch "cannot verify its integrity" | profile lacks Watch UDID / no per-watch profile | re-check 4.4 assertions |
-| No "Developer Mode" toggle in Watch Settings | toggle hidden by default | 2.6 — run `--reveal-developer-mode` first |
+| No "Developer Mode" toggle in Watch Settings | toggle hidden by default | 2.6 鈥?run `--reveal-developer-mode` first |
 | `--install` says "Enable Developer Mode" | not actually enabled/confirmed on the watch | enable in Watch Settings, restart, confirm prompt |
 | Watch asks "Trust This Computer" | fresh pairing cache | wear & unlock watch, accept when the helper triggers it |
 | Runtime "MobileGestalt Access Failed" with correct group | escape path broken on this watchOS (upstream issue #7) | not a signing issue; wait for upstream fix |
@@ -586,10 +663,10 @@ unzip -l hermes-signed.ipa | grep -E '\.app/Info.plist'
 
 ---
 
-## Part 6 · Repo contents
+## Part 6 路 Repo contents
 
 ```
-README.md                  中文完整版 (default)
+README.md                  涓枃瀹屾暣鐗?(default)
 README.en.md               this guide (English)
 patch-hermes-group.py      App Group ID rewriter (22-byte, same-length replace)
 probe-paired-watch.py      ctypes helper: dump paired-watch registry via companion_proxy
@@ -602,8 +679,8 @@ watch-device-helper/
 
 ## One-line summary
 
-Install Apple Devices → set up WSL + Swift + libimobiledevice → clone xtool, apply 3 patches, build → `xtool-watch auth` → patch the group ID in the IPA → `xtool-watch install` to the iPhone → push the `.app` to the watch with `watch_device.py` → open on the watch.
+Install Apple Devices 鈫?set up WSL + Swift + libimobiledevice 鈫?clone xtool, apply 3 patches, build 鈫?`xtool-watch auth` 鈫?patch the group ID in the IPA 鈫?`xtool-watch install` to the iPhone 鈫?push the `.app` to the watch with `watch_device.py` 鈫?open on the watch.
 
 ---
 
-**Author**: Xiaohongshu [@champ](https://xhslink.cn/o/6M9yj7X0RCn) · Verified on watchOS 27.2 / iOS 27.0.1 / free Apple ID
+**Author**: Xiaohongshu [@champ](https://xhslink.cn/o/6M9yj7X0RCn) 路 Verified on watchOS 27.2 / iOS 27.0.1 / free Apple ID

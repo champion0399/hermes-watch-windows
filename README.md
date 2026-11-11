@@ -590,7 +590,84 @@ unzip -l hermes-signed.ipa | grep -E '\.app/Info.plist'
 
 ---
 
-## 第 5 部分 · 坑位速查
+## 第 5 部分 · App 功能与设置总览（1.4.1，基于源码）
+
+原作者 README 只写了安装方法，没列功能。以下为源码（`HermesEnabler2/` 下 Swift/ObjC）里的完整清单，所有开关最终都是改 MobileGestalt（MG）缓存里的"能力声明"。
+
+### 表盘（Watch Faces）
+
+| 开关 | MG 字段 | 作用 | 注意 |
+|---|---|---|---|
+| Hermès | `DeviceBrand` + `fuKL2rMywRgQF1wowOA/cg` | 品牌伪造成 Hermès Edition → 解锁爱马仕表盘 | 核心；改完重启 Carousel 生效 |
+| Ultra Faces | `main-screen-class` + `fdh+s6j3VijuyrK7xLjd7g` | 屏幕类别伪造成 Ultra → 解锁 Ultra 表盘 | ⚠️ 与 Hermès 冲突：开 Ultra 用不了 Faubourg Party |
+
+### 显示（Display）
+
+| 开关 | MG 键 | 作用 |
+|---|---|---|
+| Always-On Display | `2OOJf1VhaM7NxfRok3HbWQ` + `j8/Omm6s1lsmTDFsXjsBfA` | 声明支持常显屏 |
+| AOD 1 Hz | `aoJSd/MXk7M40NgXTM6x+g` | 常显 1Hz 刷新（S9+ 特性） |
+| AOD Vibrancy | `ykpu7qyhqFweVMKtxNylWA` | 常显鲜艳模式（S9+） |
+| Periodic ALS Updates | `Leuy56dCZmAMYoVCQGTfPA` | 环境光周期更新 |
+| 分辨率覆盖 | `g7YQ1Djxh4YiKlEeaoGhzg` + `OjzOua0LkOegX7pQdgMksw` | 改 MG 上报屏幕尺寸，6 档预设 | ⚠️ 危险：改错 UI 超大/裁剪（issue #28），需重启，可还原 |
+
+### 操控（Controls）
+
+| 开关 | MG 键 | 作用 |
+|---|---|---|
+| Action Button | `FBw/2WrPE2supEKosxxoTw` | 声明有 Ultra 操作按钮 |
+| Double Tap | `l1CWke97nbaAcWDqA6T5LA` | 双指互点手势（S9+） |
+| On-Screen Keyboard | `MQJ1mlVrhOwaUUVJehJSVA` | 屏幕键盘（S7+） |
+| Raise Wrist to Wake | `nmOy2K5HzAAs2QNAi8wR+Q` | 抬腕唤醒 |
+| Raise to Speak | `4D8XW4YwJI7QvyPhv1TEdw` | 抬腕直接 Siri（S3+） |
+| Siri Listening Capability | `U+73bmG4kBGj6kpreQXUTQ` | "嘿 Siri"常听 |
+
+### 传感器与体能（Sensors & Workouts）
+
+| 开关 | MG 键 | 对应硬件 |
+|---|---|---|
+| Depth Sensor | `Ijs+pw5tRyxqSy5kfgZNuQ` | Ultra 深度计 |
+| Absolute Altimeter | `PFnuFyqMMnGUQQnTqS5byg` | 绝对高度计（S8+/Ultra） |
+| Always-On Compass | `aCQx2Qq/TChnNAq1rr6Egw` | 常驻指南针（SE2+） |
+| Compass Orienteering | `GPIs61LYNpcwZqwlFr7bbg` | 定向越野（Ultra Waypoints） |
+| Continuous Heart Rate | `W2RPjaqovtsgiRB6ScePGA` | 持续心率 |
+| Noise Exposure | `SaW+DA+cbiqDHrex8MTABA` | 噪声监测（S4+） |
+| Battery Information | `Kao6GNYdAy5hwXblxeGYJQ` | 电池健康 |
+| Swimming Workouts | `cRjPy4Ef+KZwJ+nfPeBV5Q` | 游泳训练 |
+
+⚠️ 这一整组只是"能力声明"，**不会变出不存在的传感器**——没有深度计的表开了也测不了水深。
+
+### Siri 与智能（Siri & Intelligence）
+
+| 选项 | MG 键 | 作用 |
+|---|---|---|
+| Region Code | `h63QSdBCiT/z0WU6rdQv6Q` | 设备区域码：美/港/日/国行/台/英/加 |
+| Sales Region | `zHeENZu+wbg7PUprwNwBWg` + `yK+xavymRGZ3xWc1tb8XDg` | 销售地区后缀（LL/A、ZA/A 等） |
+| Apple Intelligence / Siri AI | `A62OafQ85EJAiiqKn4agtg` | 声明苹果智能（需配对 iPhone 也支持） |
+| On-Device Siri | `K/R1GfGfCkXvEhaPS2Vrng` | 设备端 Siri |
+| Audio Intelligence | `rb2tKZxlj0Gm2tBmUQSLqQ` | 音频智能（仅 Series 12 / Ultra 4 有效） |
+
+### 备份（MG Backups）
+
+- **首次强制**：任何改动前先建"初始备份"，受保护不可覆盖
+- **三层**：`initial`（首次）→ `auto-*`（每次写入前自动）→ `manual-*`（手动）
+- **还原校验**：对比 `CacheUUID` 和 `CacheData` 长度，不匹配拒绝写（防止把别的表/别的系统的备份刷进去）
+
+### 隐藏机制（UI 没有，源码才有）
+
+- **BQEscape 6 策略**：class13-direct / class13-traversal / class7-symlink / class2-stage / class2-subpath / class2-parent，全失败才报 MobileGestalt Access Failed
+- **Class-2 fallback**（实验）：无 App Group 的备选 escape，27.2 上不可靠
+- **NeoSpring**：改完表盘后注入隐藏 WKWebView 重启 Carousel，免整机重启
+- **bqtool.log**：escape 过程日志写到 Documents/bqtool.log
+- **MGOffsets/MGDefaults plist**：每个支持的 build 一份偏移表 + CacheUUID，不在表里直接拒绝写（"不支持此版本"的来源）
+
+### 关键限制
+
+1. 只认 `MGOffsets` 里 `RecoveryVerified` 的 build；2. flag ≠ 硬件；3. Hermès 与 Ultra 互斥；4. 备份绑定 build，watchOS 更新后旧备份可能失效；5. iPhone 伴侣 app 是空壳，只有"去手表打开"引导页。
+
+---
+
+## 第 6 部分 · 坑位速查
 
 | 现象 | 原因 | 解法 |
 |---|---|---|
@@ -609,7 +686,7 @@ unzip -l hermes-signed.ipa | grep -E '\.app/Info.plist'
 
 ---
 
-## 第 6 部分 · 附录：watch_device.py 依赖的两份文件
+## 第 7 部分 · 附录：watch_device.py 依赖的两份文件
 
 ### `watch_connection.py`
 
