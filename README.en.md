@@ -6,7 +6,7 @@
 >
 > **Note for AI agents**: this is a from-scratch runbook. Do not skip the "verify" steps.
 > All placeholders — `champ`, `<DEPS_PREFIX>`, `<WATCH_UDID>`, `<PHONE_UDID>`, `<GROUP_ID>` — must be replaced with real values.
-> Verified on: Windows 11 + WSL2 Ubuntu 24.04, Swift 6.4.1, libimobiledevice 1.4.0, iPhone (iOS 26.x), Apple Watch (watchOS 27.2), free Apple ID.
+> Verified on: Windows 11 + WSL2 Ubuntu 24.04, Swift 6.4.1, libimobiledevice 1.4.0, iPhone (iOS 27.0.1), Apple Watch (watchOS 27.2), free Apple ID.
 
 ---
 
@@ -604,4 +604,4 @@ Install Apple Devices → set up WSL + Swift + libimobiledevice → clone xtool,
 
 ---
 
-**Author**: Xiaohongshu [@champ](https://xhslink.cn/o/6M9yj7X0RCn) · Verified on watchOS 27.2 / iOS 26.x / free Apple ID
+**Author**: Xiaohongshu [@champ](https://xhslink.cn/o/6M9yj7X0RCn) · Verified on watchOS 27.2 / iOS 27.0.1 / free Apple ID

@@ -6,7 +6,7 @@
 >
 > **给 AI agent 的说明**：这是一份从头开始的完整操作手册，不要跳过任何"自检"步骤。
 > 所有路径里的 `champ`、`<DEPS_PREFIX>`、`<WATCH_UDID>`、`<PHONE_UDID>`、`<GROUP_ID>` 是占位符，按实际值替换。
-> 已验证环境：Windows 11 + WSL2 Ubuntu 24.04、Swift 6.4.1、libimobiledevice 1.4.0、iPhone（iOS 26.x）、Apple Watch（watchOS 27.2）、免费 Apple ID。
+> 已验证环境：Windows 11 + WSL2 Ubuntu 24.04、Swift 6.4.1、libimobiledevice 1.4.0、iPhone（iOS 27.0.1）、Apple Watch（watchOS 27.2）、免费 Apple ID。
 
 ---
 
@@ -760,4 +760,4 @@ if __name__ == "__main__":
 
 ---
 
-**作者**：小红书 [@champ](https://xhslink.cn/o/6M9yj7X0RCn) · 实测环境 watchOS 27.2 / iOS 26.x / 免费 Apple ID
+**作者**：小红书 [@champ](https://xhslink.cn/o/6M9yj7X0RCn) · 实测环境 watchOS 27.2 / iOS 27.0.1 / 免费 Apple ID
