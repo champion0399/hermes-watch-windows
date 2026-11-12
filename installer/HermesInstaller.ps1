@@ -60,6 +60,21 @@ $btn.Location = '16,450'; $btn.Size = '160,28'
 $btn.Text = '开始安装'
 $form.Controls.Add($btn)
 
+$btnRenew = New-Object System.Windows.Forms.Button
+$btnRenew.Location = '184,450'; $btnRenew.Size = '120,28'
+$btnRenew.Text = '续签 (7天)'
+$form.Controls.Add($btnRenew)
+
+$btnUpgrade = New-Object System.Windows.Forms.Button
+$btnUpgrade.Location = '312,450'; $btnUpgrade.Size = '120,28'
+$btnUpgrade.Text = '升级最新版'
+$form.Controls.Add($btnUpgrade)
+
+$btnStatus = New-Object System.Windows.Forms.Button
+$btnStatus.Location = '440,450'; $btnStatus.Size = '100,28'
+$btnStatus.Text = '状态'
+$form.Controls.Add($btnStatus)
+
 $link = New-Object System.Windows.Forms.LinkLabel
 $link.Location = '600,454'; $link.Size = '100,20'
 $link.Text = '打开教程'; $link.TextAlign = 'MiddleRight'
@@ -155,9 +170,9 @@ function Start-Install {
     } else { Write-Log "用户 $user 已存在" 'Green' }
     $bar.Value = 65
 
-    # 4. 下载 install.sh 进 WSL
-    Set-Phase '第 4 步 · 下载安装脚本进 WSL'
-    wsl.exe -d $script:WslDistro -u $user bash -c "curl -sL '$script:InstallShUrl' -o ~/install.sh && chmod +x ~/install.sh && echo OK" | ForEach-Object { Write-Log $_ 'DarkGray' }
+    # 4. 下载脚本进 WSL
+    Set-Phase '第 4 步 · 下载脚本进 WSL'
+    wsl.exe -d $script:WslDistro -u $user bash -c "curl -sL '$script:InstallShUrl' -o ~/install.sh && chmod +x ~/install.sh && curl -sL 'https://raw.githubusercontent.com/champion0399/hermes-watch-windows/main/manage.sh' -o ~/manage.sh && chmod +x ~/manage.sh && echo OK" | ForEach-Object { Write-Log $_ 'DarkGray' }
     $bar.Value = 75
 
     # 5. 启动 WSL 安装（弹终端交互）
@@ -172,7 +187,18 @@ function Start-Install {
     $btn.Text = '完成'; $btn.Enabled = $true
 }
 
+function Invoke-WslAction([string]$action, [string]$label) {
+    $user = $script:WslUser
+    Set-Phase "$label 中（弹出终端窗口）…"
+    Write-Log "执行 $action，请在终端窗口中查看进度" 'DarkOrange'
+    $cmd = "wsl -d $($script:WslDistro) -u $user bash ~/manage.sh $action"
+    Start-Process 'cmd.exe' -ArgumentList "/k title Hermes $action & $cmd & echo. & echo 完成，可关闭窗口 & pause >nul"
+}
+
 $btn.add_Click({ if ($btn.Text -eq '完成') { $form.Close() } else { Start-Install } })
+$btnRenew.add_Click({ Invoke-WslAction 'renew' '续签' })
+$btnUpgrade.add_Click({ Invoke-WslAction 'upgrade' '升级' })
+$btnStatus.add_Click({ Invoke-WslAction 'status' '查看状态' })
 
 $form.add_Shown({
     Write-Log 'HermesEnabler · Apple Watch 一键安装' 'DarkBlue'

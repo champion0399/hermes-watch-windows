@@ -215,6 +215,17 @@ APP=$(find extract-watch -name '*.app' -type d | head -1)
 say "直推手表: $APP"
 "$VENV/bin/python" "$HELPER/watch_device.py" --state-directory "$STATE" --install "$APP"
 
+# 写配置文件供 manage.sh 续签/升级用
+cat > "$WORK/hermes-watch.conf" <<EOF
+GROUP_ID="$GID"
+WATCH_UDID="$WUDID"
+APP_NAME="$(basename "$APP")"
+LAST_IPA_URL="$URL"
+SIGNED_IPA="$WORK/hermes-signed.ipa"
+GROUPED_IPA="$WORK/hermes-grouped.ipa"
+EOF
+
 echo
 ok "全部完成！在手表上打开 HermesEnabler 即可。"
-say "组 ID: $GID · Watch: $WUDID · 7 天后重跑本脚本续签"
+say "组 ID: $GID · Watch: $WUDID"
+say "续签/升级：运行 manage.sh renew|upgrade，或 Windows 端再开 HermesInstaller"
