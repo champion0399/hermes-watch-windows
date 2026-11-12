@@ -27,6 +27,14 @@ It will:
 
 You only need to type **3 things** in that terminal: Apple ID password → 2FA code → App Group ID (has a default, just press Enter). Compilation, signing, and watch install are fully automatic.
 
+**Three buttons at the bottom** (for post-install management):
+
+| Button | What it does |
+|---|---|
+| **Renew (7d)** | Free cert expires in 7 days — click to re-sign & reinstall. **No Apple ID re-entry** (session lasts to 2027) |
+| **Upgrade** | Fetches the latest HermesEnabler release → patch → sign → install |
+| **Status** | Shows group ID, Watch UDID, signing time, Apple ID state, installed apps |
+
 ### Option B · WSL command line (if WSL already installed)
 
 ```bash
