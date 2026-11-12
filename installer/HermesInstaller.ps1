@@ -10,7 +10,8 @@ $script:ExePath = [Environment]::GetCommandLineArgs()[0]
 $script:IsResume = [Environment]::GetCommandLineArgs() -contains '-resume'
 $script:WslUser = 'user'
 $script:WslDistro = 'Ubuntu-24.04'
-$script:InstallShUrl = 'https://raw.githubusercontent.com/champion0399/hermes-watch-windows/main/install.sh'
+$script:BaseUrl = 'https://github.com/champion0399/hermes-watch-windows/releases/latest/download'
+$script:InstallShUrl = "$script:BaseUrl/install.sh"
 
 # ---------- 工具 ----------
 function Write-Log([string]$msg, [string]$color = 'Black') {
@@ -181,7 +182,7 @@ function Start-Install {
 
     # 4. 下载脚本进 WSL（wsl.conf 已设默认用户，直接 wsl 进入）
     Set-Phase '第 4 步 · 下载脚本进 WSL'
-    wsl.exe -d $script:WslDistro bash -c "curl -sL '$script:InstallShUrl' -o ~/install.sh && chmod +x ~/install.sh && curl -sL 'https://raw.githubusercontent.com/champion0399/hermes-watch-windows/main/manage.sh' -o ~/manage.sh && chmod +x ~/manage.sh && echo OK" | ForEach-Object { Write-Log $_ 'DarkGray' }
+    wsl.exe -d $script:WslDistro bash -c "curl -sL '$script:InstallShUrl' -o ~/install.sh && chmod +x ~/install.sh && curl -sL '$script:BaseUrl/manage.sh' -o ~/manage.sh && chmod +x ~/manage.sh && echo OK" | ForEach-Object { Write-Log $_ 'DarkGray' }
     $bar.Value = 75
 
     # 5. 启动 WSL 安装（弹终端交互）
@@ -200,7 +201,7 @@ function Invoke-WslAction([string]$action, [string]$label) {
     Set-Phase "$label 中（弹出终端窗口）…"
     Write-Log "执行 $action，请在终端窗口中查看进度" 'DarkOrange'
     # 先确保 manage.sh 存在（在 PowerShell 里跑，避免 bash -c 引号嵌套）
-    wsl.exe -d $script:WslDistro bash -c "curl -sL 'https://raw.githubusercontent.com/champion0399/hermes-watch-windows/main/manage.sh' -o ~/manage.sh 2>/dev/null; chmod +x ~/manage.sh" | Out-Null
+    wsl.exe -d $script:WslDistro bash -c "curl -sL '$script:BaseUrl/manage.sh' -o ~/manage.sh 2>/dev/null; chmod +x ~/manage.sh" | Out-Null
     $cmd = "wsl -d $($script:WslDistro) bash ~/manage.sh $action"
     Start-Process 'cmd.exe' -ArgumentList "/k title Hermes $action & $cmd & echo. & echo 完成，可关闭窗口 & pause >nul"
 }
