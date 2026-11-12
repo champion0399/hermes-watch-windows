@@ -100,7 +100,6 @@ fetch_watch_udid() {
   echo "$WATCH_UDID"
 }
 extract_and_push() {
-  local app=$1
   rm -rf "$WORK/extract-watch" && mkdir -p "$WORK/extract-watch"
   unzip -o -q "$SIGNED_IPA" "Payload/*/Watch/*.app/*" -d "$WORK/extract-watch"
   local wapp=$(find "$WORK/extract-watch" -name '*.app' -type d | head -1)
