@@ -57,7 +57,9 @@ xtool_watch() { LD_LIBRARY_PATH="$LD_LIBRARY_PATH" USBMUXD_SOCKET_ADDRESS="$USBM
 load_conf() {
   if [ -f "$CONF" ]; then . "$CONF"; return; fi
   # 引导：手动装过的人没有 conf，从已签名的 IPA 里反推组 ID，手表 UDID 当场查
-  SIGNED_IPA=$(ls -t "$WORK"/*-signed.ipa 2>/dev/null | head -1)
+  # 固定输出路径，避免引导时挑错历史 *-signed.ipa
+  SIGNED_IPA="$WORK/hermes-signed.ipa"
+  [ -f "$SIGNED_IPA" ] || SIGNED_IPA=$(ls -t "$WORK"/*-signed.ipa 2>/dev/null | head -1)
   [ -n "$SIGNED_IPA" ] || die "没有配置也没有已签名 IPA — 先跑 install.sh"
   GROUP_ID=$(python3 - "$SIGNED_IPA" <<'PYEOF'
 import zipfile, re, sys
@@ -85,6 +87,8 @@ SIGNED_IPA="$SIGNED_IPA"
 GROUPED_IPA="$GROUPED_IPA"
 EOF
 }
+# 每次 xtool 签名后都复位到固定输出路径，引导只影响首次
+reset_signed() { SIGNED_IPA="$WORK/hermes-signed.ipa"; }
 
 # ---------- 工具 ----------
 need_watch_ipa() {
@@ -135,6 +139,7 @@ cmd_renew() {
   say "=== 续签（重新签名 + 重装）==="
   say "Apple ID: 复用已存 session（2027 过期，不需要重登）"
   fetch_watch_udid >/dev/null
+  reset_signed
   rm -f "$SIGNED_IPA"
   xtool_watch install "$GROUPED_IPA" --watch-udid "$WATCH_UDID" --signed-ipa-output "$SIGNED_IPA"
   extract_and_push
@@ -165,6 +170,7 @@ for it in zin.infolist():
     zout.writestr(it,d)
 zout.close(); print(f'replaced {n}')
 PYEOF
+  reset_signed
   rm -f "$SIGNED_IPA"
   xtool_watch install "$GROUPED_IPA" --watch-udid "$WATCH_UDID" --signed-ipa-output "$SIGNED_IPA"
   extract_and_push
