@@ -256,20 +256,27 @@ xtool-watch auth status    # confirm the Team ID resolved
 
 ## Part 4 · Prepare the HermesEnabler IPA
 
-### 4.1 Download
+### 4.1 Download (always fetch the latest release)
+
+pookjw ships updates frequently — **never hardcode a version**. Grab the latest IPA automatically:
 
 ```bash
 mkdir -p ~/xtool-tmp && cd ~/xtool-tmp
-curl -L -o hermes-1.4.1.ipa https://github.com/pookjw/HermesEnabler/releases/download/1.4.1/HermesEnabler.ipa
-# if 404, check the releases page for the actual asset name
+
+URL=$(curl -s https://api.github.com/repos/pookjw/HermesEnabler/releases/latest | \
+  grep -o 'https://[^"]*HermesEnabler[^"]*\.ipa' | head -1)
+echo "Latest: $URL"
+curl -L -o hermes-latest.ipa "$URL"
 ```
+
+If the API returns a `.app` or `.zip`, inspect it before proceeding. Manual fallback: open https://github.com/pookjw/HermesEnabler/releases/latest and check the asset name.
 
 ### 4.2 Rewire the App Group ID (critical)
 
 The binary hardcodes `group.com.kamui.escape` (the original developer's group — nobody else can register it; Apple replies Error 35 "not available"). Replace it with a unique **22-byte** ID from your own account, e.g. `group.com.friend.hermes` (22 chars). Use `patch-hermes-group.py` from this repo:
 
 ```bash
-python3 patch-hermes-group.py hermes-1.4.1.ipa hermes-1.4.1-grouped.ipa 'group.com.<your-id>'
+python3 patch-hermes-group.py hermes-latest.ipa hermes-grouped.ipa 'group.com.<your-id>'
 # expected: replaced 2 (one occurrence per fat-binary slice)
 ```
 
@@ -294,7 +301,7 @@ The first run triggers a "Trust This Computer" prompt **on the Watch** — accep
 ### 4.4 Sign & install to the iPhone
 
 ```bash
-xtool-watch install ~/xtool-tmp/hermes-1.4.1-grouped.ipa \
+xtool-watch install ~/xtool-tmp/hermes-grouped.ipa \
   --watch-udid <WATCH_UDID> \
   --signed-ipa-output ~/xtool-tmp/hermes-signed.ipa
 ```
@@ -475,7 +482,7 @@ USBMUXD_SOCKET_ADDRESS=172.27.128.1:27015 \
 
 ### What you do NOT need to redo
 
-- ❌ Re-patch the binary (`hermes-1.4.1-grouped.ipa` is reusable)
+- ❌ Re-patch the binary (`hermes-grouped.ipa` is reusable within the same version)
 - ❌ Re-register the App Group (team groups persist forever)
 - ❌ Re-run `xtool-watch auth` (unless you logged out / changed accounts)
 - ❌ Re-trust the watch (pairing cache still lives in `--state-directory`)

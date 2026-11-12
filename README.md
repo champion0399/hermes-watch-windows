@@ -258,13 +258,21 @@ xtool-watch auth status    # 确认 Team ID 已拿到
 
 ## 第 4 部分 · 处理 HermesEnabler IPA
 
-### 4.1 下载
+### 4.1 下载（始终拉取原作者最新版）
+
+原作者 pookjw 更新很勤快，**不要写死版本号**。自动拿最新 release 的 IPA：
 
 ```bash
-cd ~/xtool-tmp || mkdir -p ~/xtool-tmp && cd ~/xtool-tmp
-curl -L -o hermes-1.4.1.ipa https://github.com/pookjw/HermesEnabler/releases/download/1.4.1/HermesEnabler.ipa
-# 若 404，去 releases 页面看实际 asset 名
+mkdir -p ~/xtool-tmp && cd ~/xtool-tmp
+
+# 从 GitHub API 取最新 release 的 IPA 下载地址
+URL=$(curl -s https://api.github.com/repos/pookjw/HermesEnabler/releases/latest | \
+  grep -o 'https://[^"]*HermesEnabler[^"]*\.ipa' | head -1)
+echo "Latest: $URL"
+curl -L -o hermes-latest.ipa "$URL"
 ```
+
+如果 API 拿到的是 `.app` 或 `.zip`，先看里面有什么再处理。手动方式：打开 https://github.com/pookjw/HermesEnabler/releases/latest 看 asset 名再下载。
 
 ### 4.2 换 App Group ID（关键）
 
@@ -287,7 +295,7 @@ zout.close(); print('replaced', n)
 ```
 
 ```bash
-python3 patch-hermes-group.py hermes-1.4.1.ipa hermes-1.4.1-grouped.ipa 'group.com.<你的ID>'
+python3 patch-hermes-group.py hermes-latest.ipa hermes-grouped.ipa 'group.com.<你的ID>'
 # 预期输出 replaced 2（fat 二进制两个 slice 各一处）
 ```
 
@@ -314,7 +322,7 @@ USBMUXD_SOCKET_ADDRESS=172.27.128.1:27015 \
 ### 4.4 签名并装到 iPhone
 
 ```bash
-xtool-watch install ~/xtool-tmp/hermes-1.4.1-grouped.ipa \
+xtool-watch install ~/xtool-tmp/hermes-grouped.ipa \
   --watch-udid <WATCH_UDID> \
   --signed-ipa-output ~/xtool-tmp/hermes-signed.ipa
 ```
@@ -497,7 +505,7 @@ USBMUXD_SOCKET_ADDRESS=172.27.128.1:27015 \
 
 ### 不需要重做的事
 
-- ❌ 不用重新 patch 二进制（`hermes-1.4.1-grouped.ipa` 留着复用）
+- ❌ 不用重新 patch 二进制（`hermes-grouped.ipa` 留着复用，同一版本内）
 - ❌ 不用重新注册 App Group（团队下的组 ID 永久有效）
 - ❌ 不用重新 `xtool-watch auth`（除非登出或换账号）
 - ❌ 不用重新点手表信任（`--state-directory` 里的配对缓存还在）
