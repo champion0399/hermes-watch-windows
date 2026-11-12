@@ -158,16 +158,22 @@ function Start-Install {
 
     # 3. Ubuntu 用户
     Set-Phase '第 3 步 · 配置 WSL 用户'
-    $user = $script:WslUser
-    $exists = (wsl.exe -d $script:WslDistro -u root id -u $user 2>$null) -match '^\d+$'
-    if (-not $exists) {
-        Write-Log "创建 WSL 用户 $user …" 
+    # 优先用已存在的普通用户（uid>=1000），没有才创建 'user'
+    $user = $null
+    $existing = wsl.exe -d $script:WslDistro -u root bash -c "awk -F: '\$3>=1000 && \$3<65534 {print \$1; exit}' /etc/passwd" 2>$null
+    if ($existing -and $existing.Trim()) {
+        $user = $existing.Trim()
+        Write-Log "检测到已存在用户 $user" 'Green'
+    } else {
+        $user = $script:WslUser
+        Write-Log "没有普通用户，创建 $user …"
         wsl.exe -d $script:WslDistro -u root useradd -m -s /bin/bash $user 2>$null | Out-Null
         wsl.exe -d $script:WslDistro -u root bash -c "echo '$user ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/$user && chmod 440 /etc/sudoers.d/$user"
         wsl.exe -d $script:WslDistro -u root bash -c "printf '[user]\ndefault=$user\n' > /etc/wsl.conf"
         wsl.exe --shutdown $script:WslDistro
         Write-Log "用户 $user 已创建并设为默认" 'Green'
-    } else { Write-Log "用户 $user 已存在" 'Green' }
+    }
+    $script:WslUser = $user
     $bar.Value = 65
 
     # 4. 下载脚本进 WSL
@@ -189,8 +195,11 @@ function Start-Install {
 
 function Invoke-WslAction([string]$action, [string]$label) {
     $user = $script:WslUser
+    # 复用第 3 步的用户检测
+    $existing = wsl.exe -d $script:WslDistro -u root bash -c "awk -F: '\$3>=1000 && \$3<65534 {print \$1; exit}' /etc/passwd" 2>$null
+    if ($existing -and $existing.Trim()) { $user = $existing.Trim() }
     Set-Phase "$label 中（弹出终端窗口）…"
-    Write-Log "执行 $action，请在终端窗口中查看进度" 'DarkOrange'
+    Write-Log "以用户 $user 执行 $action，请在终端窗口中查看进度" 'DarkOrange'
     $cmd = "wsl -d $($script:WslDistro) -u $user bash ~/manage.sh $action"
     Start-Process 'cmd.exe' -ArgumentList "/k title Hermes $action & $cmd & echo. & echo 完成，可关闭窗口 & pause >nul"
 }
