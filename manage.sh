@@ -106,7 +106,7 @@ fetch_watch_udid() {
 extract_and_push() {
   rm -rf "$WORK/extract-watch" && mkdir -p "$WORK/extract-watch"
   unzip -o -q "$SIGNED_IPA" "Payload/*/Watch/*.app/*" -d "$WORK/extract-watch"
-  local wapp=$(find "$WORK/extract-watch" -name '*.app' -type d | head -1)
+  local wapp=$(find "$WORK/extract-watch" -path '*/Watch/*.app' -type d | head -1)
   [ -n "$wapp" ] || die "找不到 watch .app"
   say "直推手表: $(basename "$wapp")"
   "$VENV/bin/python" "$HELPER/watch_device.py" --state-directory "$STATE" --install "$wapp"
