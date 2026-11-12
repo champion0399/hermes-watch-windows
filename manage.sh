@@ -24,8 +24,15 @@ export LD_LIBRARY_PATH="$DEPS/prefix/lib"
 GATEWAY=$(ip route show default | awk '{print $3}')
 export USBMUXD_SOCKET_ADDRESS="$GATEWAY:27015"
 
-XTOOL_BIN="$SRC/.build/release/xtool"; [ -x "$SRC/.build/debug/xtool" ] && XTOOL_BIN="$SRC/.build/debug/xtool"
-[ -x "$XTOOL_BIN" ] || die "xtool 未安装，先跑 install.sh"
+# 自动探测 xtool 二进制（新装是 xtool-watch-src，手动装过的是 xtool-watch-fix 或任意名字）
+XTOOL_BIN=""
+for d in "$HOME/Developer"/xtool*; do
+  for cfg in release debug; do
+    b="$d/.build/$cfg/xtool"
+    [ -x "$b" ] && XTOOL_BIN="$b" && break 2
+  done
+done
+[ -n "$XTOOL_BIN" ] || die "xtool 未安装，先跑 install.sh"
 
 xtool_watch() { LD_LIBRARY_PATH="$LD_LIBRARY_PATH" USBMUXD_SOCKET_ADDRESS="$USBMUXD_SOCKET_ADDRESS" "$XTOOL_BIN" "$@"; }
 load_conf()   { [ -f "$CONF" ] && . "$CONF" || die "配置文件不存在，先跑 install.sh"; }
