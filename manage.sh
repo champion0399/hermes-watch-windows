@@ -35,7 +35,28 @@ done
 [ -n "$XTOOL_BIN" ] || die "xtool 未安装，先跑 install.sh"
 
 xtool_watch() { LD_LIBRARY_PATH="$LD_LIBRARY_PATH" USBMUXD_SOCKET_ADDRESS="$USBMUXD_SOCKET_ADDRESS" "$XTOOL_BIN" "$@"; }
-load_conf()   { [ -f "$CONF" ] && . "$CONF" || die "配置文件不存在，先跑 install.sh"; }
+load_conf() {
+  if [ -f "$CONF" ]; then . "$CONF"; return; fi
+  # 引导：手动装过的人没有 conf，从已签名的 IPA 里反推组 ID，手表 UDID 当场查
+  SIGNED_IPA=$(ls -t "$WORK"/*-signed.ipa 2>/dev/null | head -1)
+  [ -n "$SIGNED_IPA" ] || die "没有配置也没有已签名 IPA — 先跑 install.sh"
+  GROUP_ID=$(python3 - "$SIGNED_IPA" <<'PYEOF'
+import zipfile, re, sys
+z=zipfile.ZipFile(sys.argv[1])
+for n in z.namelist():
+    if n.endswith('mobileprovision'):
+        m=re.search(rb'group\.[a-zA-Z0-9.-]{1,18}', z.read(n))
+        if m: print(m.group().decode()); sys.exit(0)
+PYEOF
+)
+  [ -n "$GROUP_ID" ] || die "从 mobileprovision 里读不到组 ID"
+  local f="$WORK/watch-info.json"
+  "$VENV/bin/python" "$HELPER/watch_device.py" --state-directory "$STATE" --device-info "$f" >/dev/null 2>&1
+  WATCH_UDID=$(python3 -c "import json;print(json.load(open('$f'))['udid'])" 2>/dev/null || true)
+  APP_NAME="HermesEnabler2.app"; LAST_IPA_URL="(manual)"; GROUPED_IPA=$(ls -t "$WORK"/*grouped.ipa 2>/dev/null | head -1)
+  save_conf
+  echo "已自动建立配置：GROUP_ID=$GROUP_ID"
+}
 save_conf()   { cat > "$CONF" <<EOF
 GROUP_ID="$GROUP_ID"
 WATCH_UDID="$WATCH_UDID"
