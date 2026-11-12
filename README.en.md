@@ -14,26 +14,28 @@
 
 ## 🚀 One-click install
 
-### Option A · Windows GUI (recommended, zero command line)
+### Option A · Windows GUI (recommended)
 
-Download **[HermesInstaller.exe](https://github.com/champion0399/hermes-watch-windows/releases/latest/download/HermesInstaller.exe)** (41 KB) and double-click it.
+Download **[HermesInstaller.exe](https://github.com/champion0399/hermes-watch-windows/releases/latest/download/HermesInstaller.exe)** (currently **v1.3.0**, about 717 KiB) and double-click it. Confirm the version in the window title.
 
 It will:
-1. Request admin (UAC) automatically
+1. Request admin (UAC) for first installation
 2. Check/install **Apple Devices** (iPhone driver, via winget)
-3. Check/install **WSL + Ubuntu 24.04** (writes a RunOnce entry and auto-resumes if a reboot is needed)
-4. Create a regular Ubuntu user and set it as default
-5. Download and launch the WSL install script in a new terminal window
+3. Check/install **WSL + Ubuntu 24.04**, including restart handling
+4. Reuse an existing regular user or create one in a fresh Ubuntu installation, preserving existing WSL configuration
+5. Check USB forwarding, deploy the complete embedded assets, and run installation in an interactive terminal
 
-You only need to type **3 things** in that terminal: Apple ID password → 2FA code → App Group ID (has a default, just press Enter). Compilation, signing, and watch install are fully automatic.
+Follow the terminal prompts for Developer Mode confirmation, Apple ID login and any required 2FA, and the App Group ID. Valid sessions are reused. The script handles compilation, signing, and installation.
+
+**Validation scope:** 97 Python and 82 Windows regression checks passed. The existing signed cache and the actual GUI-to-WSL read-only status path were checked. Successful device renewal/upgrade using this version and a full clean-Windows installation remain unverified. See the [management test report](MANAGEMENT-TEST-REPORT.md) and [first-install test report](FIRST-INSTALL-TEST-REPORT.md).
 
 **Three buttons at the bottom** (for post-install management):
 
 | Button | What it does |
 |---|---|
-| **Renew (7d)** | Free cert expires in 7 days — click to re-sign & reinstall. **No Apple ID re-entry** (session lasts to 2027) |
-| **Upgrade** | Fetches the latest HermesEnabler release → patch → sign → install |
-| **Status** | Shows group ID, Watch UDID, signing time, Apple ID state, installed apps |
+| **Renew (7d)** | Preserves the cached app version, re-signs and installs it, then validates the profile expiry and Watch installation receipt. Reuses a valid Apple ID session; prompts for login when needed. |
+| **Upgrade** | Fetches the latest upstream IPA, validates the download, patches, signs and installs it. Updates the recorded version and cache only after Watch verification succeeds. |
+| **Status** | Shows the last successfully recorded upstream version and local profile expiry, then queries the installed Watch app without modifying it. The app's fixed 1.0 metadata is distinguished from the upstream release tag. |
 
 ### Option B · WSL command line (if WSL already installed)
 

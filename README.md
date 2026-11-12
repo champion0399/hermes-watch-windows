@@ -14,26 +14,28 @@
 
 ## 🚀 一键安装
 
-### 方式 A · Windows 图形界面（推荐，零命令行）
+### 方式 A · Windows 图形界面（推荐）
 
-下载 **[HermesInstaller.exe](https://github.com/champion0399/hermes-watch-windows/releases/latest/download/HermesInstaller.exe)**（41KB），双击运行即可。
+下载 **[HermesInstaller.exe](https://github.com/champion0399/hermes-watch-windows/releases/latest/download/HermesInstaller.exe)**（当前 **v1.3.0**，约 717 KiB），双击运行；窗口标题可核对版本。
 
 它会：
-1. 自动请求管理员权限
+1. 首次安装时请求管理员权限
 2. 检查/安装 **Apple Devices**（iPhone 驱动，走 winget）
-3. 检查/安装 **WSL + Ubuntu 24.04**（如需重启会自动写入注册表，重启后自动续跑）
-4. 在 Ubuntu 里创建普通用户并设为默认
-5. 下载并启动 WSL 安装脚本，弹出终端窗口
+3. 检查/安装 **WSL + Ubuntu 24.04**，处理需要重启的情况
+4. 复用既有普通用户，或在全新 Ubuntu 中创建用户；保留现有 WSL 配置
+5. 校验 USB 转发，部署 EXE 内嵌的完整安装资源，在终端中执行安装
 
-你只需要在弹出的终端里输 **3 次**：Apple ID 密码 → 2FA 验证码 → App Group ID（有默认值，直接回车）。剩下编译、签名、装表全自动。
+按终端提示完成开发者模式确认、Apple ID 登录及可能的 2FA、App Group ID 等输入；已有有效会话会复用。脚本负责环境编译、签名和装表。
+
+**验证范围**：97 项 Python 回归、82 项 Windows 回归通过；真实签名缓存及 GUI→WSL 只读状态链路已检查。新版真实设备续签/升级成功路径及空白 Windows 完整安装仍待实机验证。详情见 [续签升级测试报告](MANAGEMENT-TEST-REPORT.md) 与 [首次安装测试报告](FIRST-INSTALL-TEST-REPORT.md)。
 
 **界面下方还有三个按钮**（装完后管理用）：
 
 | 按钮 | 干什么 |
 |---|---|
-| **续签 (7天)** | 免费证书 7 天到期，点这个重新签名+重装。**不用重输 Apple ID**（session 到 2027） |
-| **升级最新版** | 原作者发新版后点这个，自动拉最新 IPA→patch→签名→装 |
-| **状态** | 看组 ID、Watch UDID、签名时间、Apple ID 状态、已装应用 |
+| **续签 (7天)** | 保留当前缓存中的应用版本，重新签名并安装到手表；校验描述文件有效期和设备安装收据。复用有效的 Apple ID 会话，失效时提示重新登录。 |
+| **升级最新版** | 从原作者 Release 获取最新 IPA，校验下载、patch、签名并安装；仅在手表校验成功后记录版本和更新缓存。 |
+| **状态** | 显示历史成功安装的上游版本、本地签名包到期时间，并只读查询手表中的应用；设备字段固定为 1.0 时与上游版本分开显示。 |
 
 ### 方式 B · WSL 命令行（已装好 WSL 的用户）
 
