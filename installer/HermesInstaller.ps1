@@ -201,7 +201,7 @@ function Invoke-WslAction([string]$action, [string]$label) {
     Set-Phase "$label 中（弹出终端窗口）…"
     Write-Log "执行 $action，请在终端窗口中查看进度" 'DarkOrange'
     # 先确保 manage.sh 存在（在 PowerShell 里跑，避免 bash -c 引号嵌套）
-    wsl.exe -d $script:WslDistro bash -c "curl -sL '$script:BaseUrl/manage.sh' -o ~/manage.sh 2>/dev/null; chmod +x ~/manage.sh" | Out-Null
+    wsl.exe -d $script:WslDistro bash -c "curl -sL '$script:BaseUrl/manage.sh' -o /tmp/m.sh && mv /tmp/m.sh ~/manage.sh && chmod +x ~/manage.sh" | Out-Null
     $cmd = "wsl -d $($script:WslDistro) bash ~/manage.sh $action"
     Start-Process 'cmd.exe' -ArgumentList "/k title Hermes $action & $cmd & echo. & echo 完成，可关闭窗口 & pause >nul"
 }
