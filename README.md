@@ -12,6 +12,20 @@
 
 ---
 
+## 🚀 一键安装（推荐）
+
+> 已装好 WSL + Apple Devices 的前提下，在 WSL 里跑这一行即可全自动完成环境搭建、xtool 补丁编译、签名、装表：
+
+```bash
+curl -sL https://raw.githubusercontent.com/champion0399/hermes-watch-windows/main/install.sh | bash
+```
+
+脚本会：装依赖 → 装 Swift → 编译 libimobiledevice → 打补丁编译 xtool → 揭示开发者模式 → 登录 Apple ID → 拉最新 IPA → patch 组 ID → 签名装 iPhone → 直连推手表。中途只需输一次 Apple ID、一次 2FA 码、一次 App Group ID。
+
+下面是手动执行的完整版（想理解每一步或一键脚本出问题时按这个走）。
+
+---
+
 ## 第 0 部分 · 硬件与账号准备
 
 | 项 | 要求 | 检查方法 |

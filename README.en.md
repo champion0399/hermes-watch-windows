@@ -12,6 +12,20 @@
 
 ---
 
+## 🚀 One-click install (recommended)
+
+> With WSL + Apple Devices already in place, run this inside WSL to do everything automatically:
+
+```bash
+curl -sL https://raw.githubusercontent.com/champion0399/hermes-watch-windows/main/install.sh | bash
+```
+
+The script installs deps → Swift → libimobiledevice → patches & builds xtool → reveals developer mode → signs in your Apple ID → downloads the latest IPA → patches the group ID → signs & installs to iPhone → pushes directly to the watch. You only need to enter your Apple ID, one 2FA code, and an App Group ID.
+
+Below is the fully manual version — use it to understand each step or to recover when the one-click script fails.
+
+---
+
 ## Part 0 · Hardware & account prerequisites
 
 | Item | Requirement | How to check |
