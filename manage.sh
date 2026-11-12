@@ -119,8 +119,13 @@ cmd_status() {
   [ -f "$SIGNED_IPA" ] && echo "签名时间:     $(stat -c '%y' "$SIGNED_IPA" | cut -d. -f1)"
   say "=== xtool Apple ID ==="
   xtool_watch auth status 2>&1 || true
-  say "=== 已装应用 ==="
-  xtool_watch list --udid "$WATCH_UDID" 2>/dev/null | head -10 || warn "无法枚举手表应用"
+  say "=== 手表连通性 ==="
+  local f="$WORK/watch-info.json"
+  if "$VENV/bin/python" "$HELPER/watch_device.py" --state-directory "$STATE" --device-info "$f" >/dev/null 2>&1; then
+    ok "手表可连接（UDID $WATCH_UDID）"
+  else
+    warn "手表当前连不上（需 iPhone 在线 + 手表亮屏解锁）"
+  fi
 }
 
 cmd_renew() {
