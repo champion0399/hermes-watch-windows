@@ -152,6 +152,7 @@ cmd_upgrade() {
   say "Latest: $url"
   curl -L -o "$WORK/hermes-latest.ipa" "$url"
   say "patch 组 ID: $GROUP_ID"
+  cd "$WORK"
   python3 - "$GROUP_ID" <<'PYEOF'
 import zipfile, sys
 GID=sys.argv[1].encode(); OLD=b'group.com.kamui.escape'
