@@ -199,7 +199,8 @@ function Start-Install {
 function Invoke-WslAction([string]$action, [string]$label) {
     Set-Phase "$label 中（弹出终端窗口）…"
     Write-Log "执行 $action，请在终端窗口中查看进度" 'DarkOrange'
-    $cmd = "wsl -d $($script:WslDistro) bash ~/manage.sh $action"
+    $dl = "[ -f ~/manage.sh ] || curl -sL 'https://raw.githubusercontent.com/champion0399/hermes-watch-windows/main/manage.sh' -o ~/manage.sh && chmod +x ~/manage.sh"
+    $cmd = "wsl -d $($script:WslDistro) bash -c '$dl; ~/manage.sh $action'"
     Start-Process 'cmd.exe' -ArgumentList "/k title Hermes $action & $cmd & echo. & echo 完成，可关闭窗口 & pause >nul"
 }
 
