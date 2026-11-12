@@ -93,6 +93,7 @@ need_watch_ipa() {
 }
 fetch_watch_udid() {
   local f="$WORK/watch-info.json"
+  rm -f "$f"   # watch_device.py 用独占创建，文件已存在会 FileExistsError
   "$VENV/bin/python" "$HELPER/watch_device.py" --state-directory "$STATE" --device-info "$f" 2>&1 | tail -3
   WATCH_UDID=$(python3 -c "import json;print(json.load(open('$f'))['udid'])")
   save_conf
@@ -121,6 +122,7 @@ cmd_status() {
   xtool_watch auth status 2>&1 || true
   say "=== 手表连通性 ==="
   local f="$WORK/watch-info.json"
+  rm -f "$f"
   if "$VENV/bin/python" "$HELPER/watch_device.py" --state-directory "$STATE" --device-info "$f" >/dev/null 2>&1; then
     ok "手表可连接（UDID $WATCH_UDID）"
   else
