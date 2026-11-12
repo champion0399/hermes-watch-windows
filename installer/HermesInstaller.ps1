@@ -40,7 +40,7 @@ $form.MaximizeBox = $false
 
 $lbl = New-Object System.Windows.Forms.Label
 $lbl.Location = '16,12'; $lbl.Size = '680,40'
-$lbl.Font = New-Object System.Drawing.Font('Microsoft YaHei UI', 11, 'Bold')
+$lbl.Font = New-Object System.Drawing.Font([string]'Microsoft YaHei UI', [single]11, [System.Drawing.FontStyle]::Bold)
 $lbl.Text = '准备中…'
 $form.Controls.Add($lbl)
 
