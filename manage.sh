@@ -26,10 +26,12 @@ export USBMUXD_SOCKET_ADDRESS="$GATEWAY:27015"
 
 # 自动探测 xtool 二进制（swift 把产物放 .build/<arch>-<os>-gnu/{debug,release}/xtool）
 XTOOL_BIN=""
+shopt -s nullglob
 for d in "$HOME/Developer"/xtool* "$HOME"/xtool*; do
-  b=$(find "$d" -path "*/.build/*/xtool" -type f -executable 2>/dev/null | sort -r | head -1)
+  b=$(find "$d" -path '*/.build/*/xtool' -type f -executable 2>/dev/null | sort -r | head -1 || true)
   [ -n "$b" ] && XTOOL_BIN="$b" && break
 done
+shopt -u nullglob
 [ -n "$XTOOL_BIN" ] || die "xtool 未安装，先跑 install.sh"
 say "xtool: $XTOOL_BIN"
 
