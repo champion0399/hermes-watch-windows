@@ -24,15 +24,14 @@ export LD_LIBRARY_PATH="$DEPS/prefix/lib"
 GATEWAY=$(ip route show default | awk '{print $3}')
 export USBMUXD_SOCKET_ADDRESS="$GATEWAY:27015"
 
-# 自动探测 xtool 二进制（新装是 xtool-watch-src，手动装过的是 xtool-watch-fix 或任意名字）
+# 自动探测 xtool 二进制（swift 把产物放 .build/<arch>-<os>-gnu/{debug,release}/xtool）
 XTOOL_BIN=""
-for d in "$HOME/Developer"/xtool*; do
-  for cfg in release debug; do
-    b="$d/.build/$cfg/xtool"
-    [ -x "$b" ] && XTOOL_BIN="$b" && break 2
-  done
+for d in "$HOME/Developer"/xtool* "$HOME"/xtool*; do
+  b=$(find "$d" -path "*/.build/*/xtool" -type f -executable 2>/dev/null | sort -r | head -1)
+  [ -n "$b" ] && XTOOL_BIN="$b" && break
 done
 [ -n "$XTOOL_BIN" ] || die "xtool 未安装，先跑 install.sh"
+say "xtool: $XTOOL_BIN"
 
 xtool_watch() { LD_LIBRARY_PATH="$LD_LIBRARY_PATH" USBMUXD_SOCKET_ADDRESS="$USBMUXD_SOCKET_ADDRESS" "$XTOOL_BIN" "$@"; }
 load_conf() {
