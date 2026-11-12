@@ -10,7 +10,6 @@ warn(){ echo -e "${YEL}[!]${NC} $*"; }
 die() { echo -e "${RED}[✗]${NC} $*"; exit 1; }
 
 SRC="$HOME/Developer/xtool-watch-src"
-VENV="$HOME/Developer/xtool-watch-venv"
 HELPER="$HOME/Developer/watch-device-helper"
 STATE="$HOME/xtool-tmp/watch-device-state"
 WORK="$HOME/xtool-tmp"
@@ -35,6 +34,25 @@ shopt -u nullglob
 [ -n "$XTOOL_BIN" ] || die "xtool 未安装，先跑 install.sh"
 say "xtool: $XTOOL_BIN"
 
+# 自动探测 pymobiledevice3 venv 和 watch helper（缺失就下载/重建）
+setup_watch_env() {
+  local venv=""
+  for c in "$HOME/Developer/xtool-watch-venv" "$HOME/Developer/xtool-watch-device-venv"; do
+    [ -x "$c/bin/python" ] && venv="$c" && break
+  done
+  if [ -z "$venv" ]; then
+    venv="$HOME/Developer/xtool-watch-device-venv"
+    say "创建 pymobiledevice3 venv: $venv"
+    python3 -m venv "$venv" && "$venv/bin/pip" -q install --upgrade pip pymobiledevice3 || die "venv 创建失败"
+  fi
+  VENV="$venv"
+  mkdir -p "$HELPER"
+  for f in watch_connection.py watch_device.py; do
+    [ -s "$HELPER/$f" ] || curl -sL "https://raw.githubusercontent.com/champion0399/hermes-watch-windows/main/watch-device-helper/$f" -o "$HELPER/$f" || die "下载 $f 失败"
+  done
+  [ -s "$HELPER/watch_device.py" ] || die "watch_device.py 不存在"
+  VENV="$venv"
+}
 xtool_watch() { LD_LIBRARY_PATH="$LD_LIBRARY_PATH" USBMUXD_SOCKET_ADDRESS="$USBMUXD_SOCKET_ADDRESS" "$XTOOL_BIN" "$@"; }
 load_conf() {
   if [ -f "$CONF" ]; then . "$CONF"; return; fi
@@ -92,6 +110,7 @@ extract_and_push() {
 
 cmd_status() {
   say "=== Hermes Watch 状态 ==="
+  setup_watch_env
   load_conf
   echo "Group ID:     $GROUP_ID"
   echo "Watch UDID:   $WATCH_UDID"
@@ -105,6 +124,7 @@ cmd_status() {
 }
 
 cmd_renew() {
+  setup_watch_env
   need_watch_ipa
   say "=== 续签（重新签名 + 重装）==="
   say "Apple ID: 复用已存 session（2027 过期，不需要重登）"
@@ -116,6 +136,7 @@ cmd_renew() {
 }
 
 cmd_upgrade() {
+  setup_watch_env
   need_watch_ipa
   say "=== 升级到最新版 ==="
   local url
