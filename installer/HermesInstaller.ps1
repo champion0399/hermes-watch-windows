@@ -158,6 +158,8 @@ function Start-Install {
 
     # 3. Ubuntu 用户
     Set-Phase '第 3 步 · 配置 WSL 用户'
+    # 先清掉旧版可能写坏的 wsl.conf（default=user 但用户不存在 → USER_NOT_FOUND）
+    wsl.exe -d $script:WslDistro -u root bash -c "grep -q 'default=user' /etc/wsl.conf 2>/dev/null && rm -f /etc/wsl.conf" 2>$null | Out-Null
     # 优先用已存在的普通用户（uid>=1000），没有才创建 'user'
     $user = $null
     $existing = wsl.exe -d $script:WslDistro -u root bash -c "awk -F: '\$3>=1000 && \$3<65534 {print \$1; exit}' /etc/passwd" 2>$null
@@ -169,16 +171,17 @@ function Start-Install {
         Write-Log "没有普通用户，创建 $user …"
         wsl.exe -d $script:WslDistro -u root useradd -m -s /bin/bash $user 2>$null | Out-Null
         wsl.exe -d $script:WslDistro -u root bash -c "echo '$user ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/$user && chmod 440 /etc/sudoers.d/$user"
-        wsl.exe -d $script:WslDistro -u root bash -c "printf '[user]\ndefault=$user\n' > /etc/wsl.conf"
-        wsl.exe --shutdown $script:WslDistro
-        Write-Log "用户 $user 已创建并设为默认" 'Green'
+        Write-Log "用户 $user 已创建" 'Green'
     }
+    # 统一写 wsl.conf：让 wsl 默认就以该用户进入（不用每次 -u）
+    wsl.exe -d $script:WslDistro -u root bash -c "printf '[user]\ndefault=$user\n' > /etc/wsl.conf"
+    wsl.exe --shutdown $script:WslDistro
     $script:WslUser = $user
     $bar.Value = 65
 
-    # 4. 下载脚本进 WSL
+    # 4. 下载脚本进 WSL（wsl.conf 已设默认用户，直接 wsl 进入）
     Set-Phase '第 4 步 · 下载脚本进 WSL'
-    wsl.exe -d $script:WslDistro -u $user bash -c "curl -sL '$script:InstallShUrl' -o ~/install.sh && chmod +x ~/install.sh && curl -sL 'https://raw.githubusercontent.com/champion0399/hermes-watch-windows/main/manage.sh' -o ~/manage.sh && chmod +x ~/manage.sh && echo OK" | ForEach-Object { Write-Log $_ 'DarkGray' }
+    wsl.exe -d $script:WslDistro bash -c "curl -sL '$script:InstallShUrl' -o ~/install.sh && chmod +x ~/install.sh && curl -sL 'https://raw.githubusercontent.com/champion0399/hermes-watch-windows/main/manage.sh' -o ~/manage.sh && chmod +x ~/manage.sh && echo OK" | ForEach-Object { Write-Log $_ 'DarkGray' }
     $bar.Value = 75
 
     # 5. 启动 WSL 安装（弹终端交互）
@@ -186,7 +189,7 @@ function Start-Install {
     Write-Log '即将弹出终端窗口，请在里面完成：Apple ID 登录 / 2FA / App Group ID' 'DarkOrange'
     Write-Log '全程保持 iPhone 解锁亮屏、手表戴着解锁' 'DarkOrange'
     Start-Sleep -Milliseconds 800
-    $wslCmd = "wsl -d $($script:WslDistro) -u $user bash ~/install.sh"
+    $wslCmd = "wsl -d $($script:WslDistro) bash ~/install.sh"
     Start-Process 'cmd.exe' -ArgumentList "/k title HermesEnabler Watch Installer & $wslCmd & echo. & echo 安装结束，可关闭此窗口 & pause >nul"
     $bar.Value = 100
     Set-Phase 'Windows 侧已完成 — 请在新弹出的终端窗口中继续'
@@ -194,13 +197,9 @@ function Start-Install {
 }
 
 function Invoke-WslAction([string]$action, [string]$label) {
-    $user = $script:WslUser
-    # 复用第 3 步的用户检测
-    $existing = wsl.exe -d $script:WslDistro -u root bash -c "awk -F: '\$3>=1000 && \$3<65534 {print \$1; exit}' /etc/passwd" 2>$null
-    if ($existing -and $existing.Trim()) { $user = $existing.Trim() }
     Set-Phase "$label 中（弹出终端窗口）…"
-    Write-Log "以用户 $user 执行 $action，请在终端窗口中查看进度" 'DarkOrange'
-    $cmd = "wsl -d $($script:WslDistro) -u $user bash ~/manage.sh $action"
+    Write-Log "执行 $action，请在终端窗口中查看进度" 'DarkOrange'
+    $cmd = "wsl -d $($script:WslDistro) bash ~/manage.sh $action"
     Start-Process 'cmd.exe' -ArgumentList "/k title Hermes $action & $cmd & echo. & echo 完成，可关闭窗口 & pause >nul"
 }
 
