@@ -12,15 +12,26 @@
 
 ---
 
-## 🚀 一键安装（推荐）
+## 🚀 一键安装
 
-> 已装好 WSL + Apple Devices 的前提下，在 WSL 里跑这一行即可全自动完成环境搭建、xtool 补丁编译、签名、装表：
+### 方式 A · Windows 图形界面（推荐，零命令行）
+
+下载 **[HermesInstaller.exe](https://github.com/champion0399/hermes-watch-windows/releases/latest/download/HermesInstaller.exe)**（41KB），双击运行即可。
+
+它会：
+1. 自动请求管理员权限
+2. 检查/安装 **Apple Devices**（iPhone 驱动，走 winget）
+3. 检查/安装 **WSL + Ubuntu 24.04**（如需重启会自动写入注册表，重启后自动续跑）
+4. 在 Ubuntu 里创建普通用户并设为默认
+5. 下载并启动 WSL 安装脚本，弹出终端窗口
+
+你只需要在弹出的终端里输 **3 次**：Apple ID 密码 → 2FA 验证码 → App Group ID（有默认值，直接回车）。剩下编译、签名、装表全自动。
+
+### 方式 B · WSL 命令行（已装好 WSL 的用户）
 
 ```bash
 curl -sL https://raw.githubusercontent.com/champion0399/hermes-watch-windows/main/install.sh | bash
 ```
-
-脚本会：装依赖 → 装 Swift → 编译 libimobiledevice → 打补丁编译 xtool → 揭示开发者模式 → 登录 Apple ID → 拉最新 IPA → patch 组 ID → 签名装 iPhone → 直连推手表。中途只需输一次 Apple ID、一次 2FA 码、一次 App Group ID。
 
 下面是手动执行的完整版（想理解每一步或一键脚本出问题时按这个走）。
 

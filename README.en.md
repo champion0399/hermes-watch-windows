@@ -12,15 +12,26 @@
 
 ---
 
-## 🚀 One-click install (recommended)
+## 🚀 One-click install
 
-> With WSL + Apple Devices already in place, run this inside WSL to do everything automatically:
+### Option A · Windows GUI (recommended, zero command line)
+
+Download **[HermesInstaller.exe](https://github.com/champion0399/hermes-watch-windows/releases/latest/download/HermesInstaller.exe)** (41 KB) and double-click it.
+
+It will:
+1. Request admin (UAC) automatically
+2. Check/install **Apple Devices** (iPhone driver, via winget)
+3. Check/install **WSL + Ubuntu 24.04** (writes a RunOnce entry and auto-resumes if a reboot is needed)
+4. Create a regular Ubuntu user and set it as default
+5. Download and launch the WSL install script in a new terminal window
+
+You only need to type **3 things** in that terminal: Apple ID password → 2FA code → App Group ID (has a default, just press Enter). Compilation, signing, and watch install are fully automatic.
+
+### Option B · WSL command line (if WSL already installed)
 
 ```bash
 curl -sL https://raw.githubusercontent.com/champion0399/hermes-watch-windows/main/install.sh | bash
 ```
-
-The script installs deps → Swift → libimobiledevice → patches & builds xtool → reveals developer mode → signs in your Apple ID → downloads the latest IPA → patches the group ID → signs & installs to iPhone → pushes directly to the watch. You only need to enter your Apple ID, one 2FA code, and an App Group ID.
 
 Below is the fully manual version — use it to understand each step or to recover when the one-click script fails.
 
